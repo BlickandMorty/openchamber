@@ -31,6 +31,9 @@ import { useSessionMultiSelectStore } from '@/stores/useSessionMultiSelectStore'
 import { useI18n } from '@/lib/i18n';
 import { getRuntimeBearerTokenSync } from '@/lib/runtime-auth';
 import { getRuntimeApiBaseUrl } from '@/lib/runtime-switch';
+import { parseMultiRunSessionTitle } from '@/lib/multirun/title';
+import { MultiRunFusionDialog } from '@/components/multirun/MultiRunFusionDialog';
+import { FusionIcon } from '@/components/icons/FusionIcon';
 
 type Folder = { id: string; name: string; sessionIds: string[] };
 
@@ -74,7 +77,7 @@ type Props = {
   removeSessionFromFolder: (scopeKey: string, sessionId: string) => void;
   addSessionToFolder: (scopeKey: string, folderId: string, sessionId: string) => void;
   createFolderAndStartRename: (scopeKey: string, parentId?: string | null) => { id: string } | null;
-  openContextPanelTab: (directory: string, options: { mode: 'chat'; dedupeKey: string; label: string }) => void;
+  openContextPanelTab: (directory: string, options: { mode: 'chat'; dedupeKey: string; label: string; readOnly?: boolean }) => void;
   handleDeleteSession: (session: Session, source?: { archivedBucket?: boolean }) => void;
   mobileVariant: boolean;
   alwaysShowActions: boolean;
@@ -321,6 +324,8 @@ function SessionNodeItemComponent(props: Props): React.ReactNode {
   const sessionUpdatedLabel = formatSessionDateLabel(sessionTimestamp);
   const sessionCompactUpdatedLabel = formatSessionCompactDateLabel(sessionTimestamp);
   const isMenuOpen = openSidebarMenuKey === menuInstanceKey;
+  const isMultiRunLikeSession = React.useMemo(() => parseMultiRunSessionTitle(resolvedSession.title) !== null, [resolvedSession.title]);
+  const [fusionDialogOpen, setFusionDialogOpen] = React.useState(false);
 
   const descendantCount = React.useMemo(() => collectNodeDescendantIds(node).length, [collectNodeDescendantIds, node]);
 
@@ -674,6 +679,12 @@ function SessionNodeItemComponent(props: Props): React.ReactNode {
         <Icon name="download" className="mr-1 h-4 w-4" />
         {t('sessions.sidebar.session.menu.exportMarkdown')}
       </DropdownMenuItem>
+      {isMultiRunLikeSession ? (
+        <DropdownMenuItem onClick={() => setFusionDialogOpen(true)} className="[&>svg]:mr-1">
+          <FusionIcon className="mr-1 h-4 w-4" />
+          {t('sessions.sidebar.session.menu.runFusion')}
+        </DropdownMenuItem>
+      ) : null}
 
       {sessionDirectory && !archivedBucket ? (() => {
         const scopeFolders = getFoldersForScope(sessionDirectory);
@@ -984,6 +995,13 @@ function SessionNodeItemComponent(props: Props): React.ReactNode {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      {isMultiRunLikeSession ? (
+        <MultiRunFusionDialog
+          session={resolvedSession}
+          open={fusionDialogOpen}
+          onOpenChange={setFusionDialogOpen}
+        />
+      ) : null}
     </React.Fragment>
   );
 }

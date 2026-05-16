@@ -516,10 +516,38 @@ const PREVIEW_BRIDGE_SCRIPT = String.raw`(() => {
     };
 
     const proxiedUrl = (value) => {
-      if (typeof value !== 'string' || !value.startsWith('/')) return value;
-      if (value.indexOf(proxyBase) === 0) return withProxyAuth(value);
-      if (!shouldProxyPath(value)) return value;
-      return withProxyAuth(proxyBase + value);
+      if (typeof value !== 'string') return value;
+      if (value.startsWith('/')) {
+        if (value.indexOf(proxyBase) === 0) return withProxyAuth(value);
+        if (!shouldProxyPath(value)) return value;
+        return withProxyAuth(proxyBase + value);
+      }
+
+      try {
+        const parsed = new URL(value, window.location.href);
+        if (parsed.origin === window.location.origin && shouldProxyPath(parsed.pathname)) {
+          return withProxyAuth(proxyBase + parsed.pathname + parsed.search + parsed.hash);
+        }
+      } catch {}
+
+      return value;
+    };
+
+    const proxiedWebSocketUrl = (value) => {
+      if (typeof value !== 'string') return value;
+      try {
+        const parsed = new URL(value, window.location.href);
+        const current = new URL(window.location.href);
+        const sameHost = parsed.host === current.host;
+        const isWebSocketProtocol = parsed.protocol === 'ws:' || parsed.protocol === 'wss:';
+        if (sameHost && isWebSocketProtocol && shouldProxyPath(parsed.pathname)) {
+          parsed.pathname = proxyBase + parsed.pathname;
+          if (previewToken) parsed.searchParams.set('oc_preview_token', previewToken);
+          if (clientToken) parsed.searchParams.set('oc_client_token', clientToken);
+          return parsed.toString();
+        }
+      } catch {}
+      return value;
     };
 
     const proxiedNavigationUrl = (value) => {
@@ -593,6 +621,20 @@ const PREVIEW_BRIDGE_SCRIPT = String.raw`(() => {
       Object.setPrototypeOf(OpenChamberPreviewEventSource, NativeEventSource);
       Object.defineProperty(OpenChamberPreviewEventSource, 'name', { value: 'EventSource' });
       window.EventSource = OpenChamberPreviewEventSource;
+    }
+
+    if (typeof window.WebSocket === 'function') {
+      const NativeWebSocket = window.WebSocket;
+      function OpenChamberPreviewAppWebSocket(url, protocols) {
+        const nextUrl = proxiedWebSocketUrl(String(url));
+        return arguments.length === 1
+          ? new NativeWebSocket(nextUrl)
+          : new NativeWebSocket(nextUrl, protocols);
+      }
+      OpenChamberPreviewAppWebSocket.prototype = NativeWebSocket.prototype;
+      Object.setPrototypeOf(OpenChamberPreviewAppWebSocket, NativeWebSocket);
+      Object.defineProperty(OpenChamberPreviewAppWebSocket, 'name', { value: 'WebSocket' });
+      window.WebSocket = OpenChamberPreviewAppWebSocket;
     }
   };
 
