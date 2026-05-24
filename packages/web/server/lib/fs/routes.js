@@ -27,6 +27,15 @@ const isCacheableGitReadCommand = (command) => {
   return /^git rev-parse(?: --(?:absolute-git-dir|git-common-dir|show-toplevel)){1,3}$/.test(normalized);
 };
 
+// Dual-constraint bound per the project's caching policy (count + bytes). Git
+// rev-parse outputs are tiny, so these ceilings are generous and only guard
+// against pathological growth on long-lived, many-directory deployments.
+const GIT_READ_CACHE_MAX_ENTRIES = 500;
+const GIT_READ_CACHE_MAX_BYTES = 1024 * 1024;
+
+const gitReadEntryBytes = (key, result) =>
+  key.length + (result?.stdout?.length || 0) + (result?.stderr?.length || 0);
+
 const isPathWithinRoot = (resolvedPath, rootPath, path, os) => {
   const resolvedRoot = path.resolve(rootPath || os.homedir());
   const relative = path.relative(resolvedRoot, resolvedPath);
@@ -293,6 +302,30 @@ export const registerFsRoutes = (app, dependencies) => {
     }
   };
 
+  // Insert with LRU (oldest-first) eviction enforcing both count and byte caps.
+  // Map iteration order is insertion order, so deleting+re-setting a key moves
+  // it to the most-recently-used position.
+  const setGitReadCacheEntry = (key, result) => {
+    gitReadCache.delete(key);
+    gitReadCache.set(key, { result, at: Date.now() });
+
+    let totalBytes = 0;
+    for (const [k, entry] of gitReadCache) {
+      totalBytes += gitReadEntryBytes(k, entry.result);
+    }
+    while (
+      gitReadCache.size > GIT_READ_CACHE_MAX_ENTRIES ||
+      (totalBytes > GIT_READ_CACHE_MAX_BYTES && gitReadCache.size > 1)
+    ) {
+      const oldest = gitReadCache.entries().next().value;
+      if (!oldest) {
+        break;
+      }
+      totalBytes -= gitReadEntryBytes(oldest[0], oldest[1].result);
+      gitReadCache.delete(oldest[0]);
+    }
+  };
+
   // Runs a command, transparently serving/storing cacheable git-read results.
   // Non-cacheable commands always execute and are never stored.
   const runCommandWithGitReadCache = async ({ shell, shellFlag, command, resolvedCwd }) => {
@@ -302,6 +335,9 @@ export const registerFsRoutes = (app, dependencies) => {
     if (cacheKey) {
       const cached = gitReadCache.get(cacheKey);
       if (cached && Date.now() - cached.at < gitReadCacheTtlMs) {
+        // Refresh recency for LRU without altering the entry's age/TTL.
+        gitReadCache.delete(cacheKey);
+        gitReadCache.set(cacheKey, cached);
         return { ...cached.result };
       }
     }
@@ -318,7 +354,7 @@ export const registerFsRoutes = (app, dependencies) => {
 
     // Only cache successful results — failures may be transient.
     if (cacheKey && result && result.success) {
-      gitReadCache.set(cacheKey, { result, at: Date.now() });
+      setGitReadCacheEntry(cacheKey, result);
     }
 
     return result;

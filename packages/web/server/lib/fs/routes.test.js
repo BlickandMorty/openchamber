@@ -153,4 +153,43 @@ describe('fs exec git-read cache', () => {
 
     expect(calls.length).toBe(2);
   });
+
+  it('re-runs once a cached entry ages past the TTL', async () => {
+    vi.useFakeTimers();
+    try {
+      const command = 'git rev-parse --absolute-git-dir';
+      const { spawn, calls } = createSpawn({ stdoutByCommand: { [command]: '/repo/.git\n' } });
+      const handler = registerExec({ spawn }); // default 30s TTL
+
+      await callExec(handler, { commands: [command], cwd: '/repo' });
+      vi.advanceTimersByTime(31_000);
+      await callExec(handler, { commands: [command], cwd: '/repo' });
+
+      // Stale entry is not served; a fresh subprocess fires.
+      expect(calls.length).toBe(2);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('bounds the cache by evicting the least-recently-used entry past the count cap', async () => {
+    const command = 'git rev-parse --absolute-git-dir';
+    const { spawn, calls } = createSpawn(); // exit 0, empty stdout — still cacheable
+    const handler = registerExec({ spawn });
+
+    // Fill to the 500-entry ceiling with distinct working directories.
+    for (let i = 0; i < 500; i += 1) {
+      await callExec(handler, { commands: [command], cwd: `/repo-${i}` });
+    }
+    const afterFill = calls.length;
+    expect(afterFill).toBe(500);
+
+    // One more distinct dir evicts the oldest entry (/repo-0).
+    await callExec(handler, { commands: [command], cwd: '/repo-overflow' });
+    // Evicted entry must re-run; a surviving entry must still be served.
+    await callExec(handler, { commands: [command], cwd: '/repo-0' });   // evicted -> spawns
+    await callExec(handler, { commands: [command], cwd: '/repo-499' }); // cached  -> no spawn
+
+    expect(calls.length).toBe(afterFill + 2);
+  });
 });
