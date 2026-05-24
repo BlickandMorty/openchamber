@@ -6,6 +6,27 @@ const createCommandTimeoutMs = () => {
   return 5 * 60 * 1000;
 };
 
+// How long a cached git-read result stays fresh. The location of a repo's git
+// directory is effectively static while the app runs, so a short TTL safely
+// absorbs the burst of identical lookups a fresh client (e.g. right after a
+// page reload) fires for every project. Set to 0 to disable caching.
+const createGitReadCacheTtlMs = () => {
+  const raw = Number(process.env.OPENCHAMBER_GIT_READ_CACHE_TTL_MS);
+  if (Number.isFinite(raw) && raw >= 0) return raw;
+  return 30 * 1000;
+};
+
+// Only deterministic, side-effect-free git plumbing path queries are cacheable.
+// Anything outside this allowlist (including any non-git command) runs normally
+// — we never cache arbitrary exec.
+const normalizeCommand = (command) =>
+  typeof command === 'string' ? command.trim().replace(/\s+/g, ' ') : '';
+
+const isCacheableGitReadCommand = (command) => {
+  const normalized = normalizeCommand(command);
+  return /^git rev-parse(?: --(?:absolute-git-dir|git-common-dir|show-toplevel)){1,3}$/.test(normalized);
+};
+
 const isPathWithinRoot = (resolvedPath, rootPath, path, os) => {
   const resolvedRoot = path.resolve(rootPath || os.homedir());
   const relative = path.relative(resolvedRoot, resolvedPath);
@@ -243,6 +264,8 @@ export const registerFsRoutes = (app, dependencies) => {
 
   const execJobs = new Map();
   const commandTimeoutMs = createCommandTimeoutMs();
+  const gitReadCacheTtlMs = createGitReadCacheTtlMs();
+  const gitReadCache = new Map();
 
   const pruneExecJobs = () => {
     const now = Date.now();
@@ -258,6 +281,49 @@ export const registerFsRoutes = (app, dependencies) => {
     }
   };
 
+  const pruneGitReadCache = () => {
+    if (gitReadCacheTtlMs <= 0) {
+      return;
+    }
+    const now = Date.now();
+    for (const [key, entry] of gitReadCache.entries()) {
+      if (!entry || now - entry.at > gitReadCacheTtlMs) {
+        gitReadCache.delete(key);
+      }
+    }
+  };
+
+  // Runs a command, transparently serving/storing cacheable git-read results.
+  // Non-cacheable commands always execute and are never stored.
+  const runCommandWithGitReadCache = async ({ shell, shellFlag, command, resolvedCwd }) => {
+    const cacheable = gitReadCacheTtlMs > 0 && isCacheableGitReadCommand(command);
+    const cacheKey = cacheable ? `${resolvedCwd} ${normalizeCommand(command)}` : null;
+
+    if (cacheKey) {
+      const cached = gitReadCache.get(cacheKey);
+      if (cached && Date.now() - cached.at < gitReadCacheTtlMs) {
+        return { ...cached.result };
+      }
+    }
+
+    const result = await runCommandInDirectory({
+      shell,
+      shellFlag,
+      command,
+      resolvedCwd,
+      spawn,
+      buildAugmentedPath,
+      commandTimeoutMs,
+    });
+
+    // Only cache successful results — failures may be transient.
+    if (cacheKey && result && result.success) {
+      gitReadCache.set(cacheKey, { result, at: Date.now() });
+    }
+
+    return result;
+  };
+
   const runExecJob = async (job) => {
     job.status = 'running';
     job.updatedAt = Date.now();
@@ -270,14 +336,11 @@ export const registerFsRoutes = (app, dependencies) => {
       }
 
       try {
-        const result = await runCommandInDirectory({
+        const result = await runCommandWithGitReadCache({
           shell: job.shell,
           shellFlag: job.shellFlag,
           command,
           resolvedCwd: job.resolvedCwd,
-          spawn,
-          buildAugmentedPath,
-          commandTimeoutMs,
         });
         results.push(result);
       } catch (error) {
@@ -816,6 +879,7 @@ export const registerFsRoutes = (app, dependencies) => {
     }
 
     pruneExecJobs();
+    pruneGitReadCache();
 
     try {
       const resolvedCwd = path.resolve(normalizeDirectoryPath(cwd));
