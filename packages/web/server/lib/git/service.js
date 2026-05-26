@@ -1472,7 +1472,7 @@ export async function getStatus(directory, options = {}) {
   const lightMode = options.mode === 'light';
 
   try {
-    const { repoRoot, git } = await createRepositoryGitContext(directory);
+    const { directoryPath, repoRoot, git } = await createRepositoryGitContext(directory);
 
     // Use -uall to show all untracked files individually, not just directories
     const status = await git.status(['-uall']);
