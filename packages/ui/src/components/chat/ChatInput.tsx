@@ -4542,9 +4542,7 @@ const ChatInputComponent: React.FC<ChatInputProps> = ({ onOpenSettings, scrollTo
                         )}
                     </div>
 
-                    {/* Mobile session panel — slide-up overlay anchored above the composer,
-                        toggled by MobileSessionPanelTrigger. Shown in both the desktop-responsive
-                        mobile path and the dedicated MobileApp root. */}
+                    {/* Mobile session panel: slide-up overlay toggled by MobileSessionPanelTrigger. */}
                     {isMobile && <MobileSessionStatusBar />}
                 </div>
             </div>

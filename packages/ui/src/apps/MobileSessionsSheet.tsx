@@ -11,7 +11,6 @@ import {
   RiEdit2Line,
   RiFolder6Line,
   RiFolderAddLine,
-  RiNodeTree,
   RiSearchLine,
 } from '@remixicon/react';
 import type { Session } from '@opencode-ai/sdk/v2/client';
@@ -40,6 +39,7 @@ import { Input } from '@/components/ui/input';
 import { ScrollShadow } from '@/components/ui/ScrollShadow';
 import { toast } from '@/components/ui';
 import { useThemeSystem } from '@/contexts/useThemeSystem';
+import { useRuntimeAPIs } from '@/hooks/useRuntimeAPIs';
 import { useI18n } from '@/lib/i18n';
 import { PROJECT_COLOR_MAP, PROJECT_ICON_MAP, getProjectIconImageUrl } from '@/lib/projectMeta';
 import { cn } from '@/lib/utils';
@@ -66,6 +66,7 @@ type ProjectMeta = {
   color?: string | null;
   iconImage?: { mime: string; updatedAt: number; source: 'custom' | 'auto' } | null;
   iconBackground?: string | null;
+  isGitRepo: boolean;
   worktrees: WorktreeMetadata[];
 };
 
@@ -210,6 +211,33 @@ const ActiveDot: React.FC<{ ariaLabel?: string }> = ({ ariaLabel }) => (
     aria-label={ariaLabel}
   />
 );
+
+const NewWorktreeIconButton: React.FC<{
+  onClick: () => void;
+  className?: string;
+}> = ({ onClick, className }) => {
+  const { t } = useI18n();
+  const label = t('sessions.sidebar.project.actions.newWorktree');
+
+  return (
+    <button
+      type="button"
+      className={cn(
+        'flex size-9 shrink-0 items-center justify-center rounded-full text-[var(--surface-mutedForeground)] transition-colors hover:bg-[var(--interactive-hover)] hover:text-[var(--surface-foreground)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--interactive-focus-ring)]',
+        className,
+      )}
+      aria-label={label}
+      title={label}
+      onClick={(event) => {
+        event.stopPropagation();
+        onClick();
+      }}
+      style={{ touchAction: 'manipulation' }}
+    >
+      <Icon name="node-tree" className="size-4" />
+    </button>
+  );
+};
 
 const SessionRow: React.FC<{
   session: Session;
@@ -393,6 +421,7 @@ const SortableProjectRow: React.FC<{
 
 export const MobileSessionsSheet: React.FC<MobileSessionsSheetProps> = ({ open, onOpenChange }) => {
   const { t } = useI18n();
+  const { git } = useRuntimeAPIs();
   const liveSessions = useAllLiveSessions();
   const globalActiveSessions = useGlobalSessionsStore((state) => state.activeSessions);
   const projects = useProjectsStore((state) => state.projects);
@@ -410,6 +439,7 @@ export const MobileSessionsSheet: React.FC<MobileSessionsSheetProps> = ({ open, 
   const [newWorktreeDialogOpen, setNewWorktreeDialogOpen] = React.useState(false);
   const [worktreeDialogProjectId, setWorktreeDialogProjectId] = React.useState<string | null>(null);
   const [worktreesByProject, setWorktreesByProject] = React.useState<Map<string, WorktreeMetadata[]>>(new Map());
+  const [gitProjectPaths, setGitProjectPaths] = React.useState<Set<string>>(new Set());
   const [editingOrder, setEditingOrder] = React.useState(false);
   const [confirmingDeleteId, setConfirmingDeleteId] = React.useState<string | null>(null);
   // Buckets the user explicitly expanded past the SESSIONS_PER_BUCKET cap. Key: `${projectId}::${bucketKey}`.
@@ -446,22 +476,30 @@ export const MobileSessionsSheet: React.FC<MobileSessionsSheetProps> = ({ open, 
         projects.map(async (project) => {
           const path = normalizePath(project.path);
           if (!path) return null;
-          const worktrees = await listProjectWorktrees({ id: project.id, path }).catch(() => []);
-          return [path, worktrees] as const;
+          const isGitRepo = await git.checkIsGitRepository(path).catch(() => false);
+          const worktrees = isGitRepo
+            ? await listProjectWorktrees({ id: project.id, path }).catch(() => [])
+            : [];
+          return [path, worktrees, isGitRepo] as const;
         }),
       );
       if (cancelled) return;
       const next = new Map<string, WorktreeMetadata[]>();
+      const nextGitProjectPaths = new Set<string>();
       for (const entry of entries) {
-        if (entry) next.set(entry[0], entry[1]);
+        if (entry) {
+          next.set(entry[0], entry[1]);
+          if (entry[2]) nextGitProjectPaths.add(entry[0]);
+        }
       }
       setWorktreesByProject(next);
+      setGitProjectPaths(nextGitProjectPaths);
     };
     void run();
     return () => {
       cancelled = true;
     };
-  }, [open, projects]);
+  }, [git, open, projects]);
 
   const projectsMeta = React.useMemo<ProjectMeta[]>(
     () =>
@@ -473,9 +511,10 @@ export const MobileSessionsSheet: React.FC<MobileSessionsSheetProps> = ({ open, 
         color: project.color,
         iconImage: project.iconImage,
         iconBackground: project.iconBackground,
+        isGitRepo: gitProjectPaths.has(normalizePath(project.path)),
         worktrees: worktreesByProject.get(normalizePath(project.path)) ?? [],
       })),
-    [projects, worktreesByProject],
+    [gitProjectPaths, projects, worktreesByProject],
   );
 
   /**
@@ -855,24 +894,31 @@ export const MobileSessionsSheet: React.FC<MobileSessionsSheetProps> = ({ open, 
                   </div>
                   <div className="overflow-hidden rounded-2xl border border-border/40 bg-[var(--surface-elevated)]">
                     {searchProjectMatches.map((project, index) => (
-                      <button
+                      <div
                         key={project.id}
-                        type="button"
-                        className={cn(
-                          'flex min-h-14 w-full items-center gap-3 px-3 py-2 text-left transition-colors hover:bg-interactive-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset',
-                          index > 0 && 'border-t border-border/30',
-                        )}
-                        onClick={() => handleSelectProject(project)}
-                        style={{ touchAction: 'manipulation' }}
+                        className={cn('flex items-center', index > 0 && 'border-t border-border/30')}
                       >
-                        <MobileProjectIcon project={project} />
-                        <span className="block min-w-0 flex-1 truncate typography-ui-label text-foreground">
-                          {project.label}
-                        </span>
-                        <span className="shrink-0 typography-micro text-muted-foreground tabular-nums">
-                          {project.sessionCount}
-                        </span>
-                      </button>
+                        <button
+                          type="button"
+                          className="flex min-h-14 min-w-0 flex-1 items-center gap-3 px-3 py-2 text-left transition-colors hover:bg-interactive-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset"
+                          onClick={() => handleSelectProject(project)}
+                          style={{ touchAction: 'manipulation' }}
+                        >
+                          <MobileProjectIcon project={project} />
+                          <span className="block min-w-0 flex-1 truncate typography-ui-label text-foreground">
+                            {project.label}
+                          </span>
+                          <span className="shrink-0 typography-micro text-muted-foreground tabular-nums">
+                            {project.sessionCount}
+                          </span>
+                        </button>
+                        {project.isGitRepo ? (
+                          <NewWorktreeIconButton
+                            className="mr-2"
+                            onClick={() => handleNewWorktree(project.id)}
+                          />
+                        ) : null}
+                      </div>
                     ))}
                   </div>
                 </section>
@@ -931,27 +977,35 @@ export const MobileSessionsSheet: React.FC<MobileSessionsSheetProps> = ({ open, 
                     key={node.project.id}
                     className={cn(nodeIndex > 0 && 'border-t border-border/30')}
                   >
-                    <button
-                      type="button"
-                      className="flex min-h-14 w-full items-center gap-2 px-3 py-2 text-left transition-colors hover:bg-interactive-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset"
-                      onClick={() => toggleProject(node.project.id, projectExpanded)}
-                      aria-expanded={projectExpanded}
-                      aria-label={
-                        projectExpanded
-                          ? t('sessions.sidebar.group.collapseAria', { label: node.project.label })
-                          : t('sessions.sidebar.group.expandAria', { label: node.project.label })
-                      }
-                      style={{ touchAction: 'manipulation' }}
-                    >
-                      <MobileProjectIcon project={node.project} />
-                      <span className="block min-w-0 flex-1 truncate typography-ui-label text-foreground">
-                        {node.project.label}
-                      </span>
-                      {node.isActive ? <ActiveDot ariaLabel={t('mobile.sessions.activeProjectAria')} /> : null}
-                      <span className="shrink-0 typography-micro text-muted-foreground tabular-nums">
-                        {node.totalSessions}
-                      </span>
-                    </button>
+                    <div className="flex min-h-14 w-full items-center">
+                      <button
+                        type="button"
+                        className="flex min-h-14 min-w-0 flex-1 items-center gap-2 px-3 py-2 text-left transition-colors hover:bg-interactive-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset"
+                        onClick={() => toggleProject(node.project.id, projectExpanded)}
+                        aria-expanded={projectExpanded}
+                        aria-label={
+                          projectExpanded
+                            ? t('sessions.sidebar.group.collapseAria', { label: node.project.label })
+                            : t('sessions.sidebar.group.expandAria', { label: node.project.label })
+                        }
+                        style={{ touchAction: 'manipulation' }}
+                      >
+                        <MobileProjectIcon project={node.project} />
+                        <span className="block min-w-0 flex-1 truncate typography-ui-label text-foreground">
+                          {node.project.label}
+                        </span>
+                        {node.isActive ? <ActiveDot ariaLabel={t('mobile.sessions.activeProjectAria')} /> : null}
+                        <span className="shrink-0 typography-micro text-muted-foreground tabular-nums">
+                          {node.totalSessions}
+                        </span>
+                      </button>
+                      {node.project.isGitRepo ? (
+                        <NewWorktreeIconButton
+                          className="mr-2"
+                          onClick={() => handleNewWorktree(node.project.id)}
+                        />
+                      ) : null}
+                    </div>
 
                     {projectExpanded ? (
                       <div className="pb-2">
@@ -974,7 +1028,8 @@ export const MobileSessionsSheet: React.FC<MobileSessionsSheetProps> = ({ open, 
                                     style={{ touchAction: 'manipulation' }}
                                   >
                                     <ChevronToggle expanded={worktreeExpanded} />
-                                    <RiNodeTree
+                                    <Icon
+                                      name="node-tree"
                                       className={cn(
                                         'size-4 shrink-0',
                                         isActiveWt ? 'text-primary' : 'text-muted-foreground',
@@ -1070,20 +1125,6 @@ export const MobileSessionsSheet: React.FC<MobileSessionsSheetProps> = ({ open, 
                                 </div>
                               );
                             })()}
-                        {showWorktreeLevel ? (
-                          <button
-                            type="button"
-                            className="flex min-h-11 w-full items-center gap-2 py-1.5 pl-4 pr-3 text-left text-muted-foreground transition-colors hover:bg-interactive-hover hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset"
-                            onClick={() => handleNewWorktree(node.project.id)}
-                            style={{ touchAction: 'manipulation' }}
-                          >
-                            <span className="size-5 shrink-0" aria-hidden />
-                            <RiAddLine className="size-4" />
-                            <span className="typography-ui-label">
-                              {t('sessions.sidebar.project.actions.newWorktree')}
-                            </span>
-                          </button>
-                        ) : null}
                       </div>
                     ) : null}
                   </section>

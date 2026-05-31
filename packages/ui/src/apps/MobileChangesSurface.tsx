@@ -501,6 +501,7 @@ export const MobileChangesSurface: React.FC<MobileChangesSurfaceProps> = ({ onCl
               revertingPaths={revertingPaths}
               onRevertAll={handleRevertAll}
               isRevertingAll={isRevertingAll}
+              headerBackgroundClassName="bg-transparent"
               onVisiblePathsChange={setVisibleChangePaths}
             />
             <CommitSection
