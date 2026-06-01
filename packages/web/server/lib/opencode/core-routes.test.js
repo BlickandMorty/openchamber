@@ -83,6 +83,54 @@ describe('core-routes', () => {
       globalThis.fetch = originalFetch;
     }
   });
+
+  it('should let preview proxy credentials reach preview proxy validation', async () => {
+    const app = express();
+    const requireAuth = vi.fn((_req, res) => res.status(401).type('text/plain').send('Authentication required'));
+
+    registerAuthAndAccessRoutes(app, {
+      express,
+      tunnelAuthController: {
+        classifyRequestScope: () => 'local',
+        requireTunnelSession: vi.fn(),
+        getTunnelSessionFromRequest: vi.fn(),
+        clearTunnelSessionCookie: vi.fn(),
+        exchangeBootstrapToken: vi.fn(),
+      },
+      uiAuthController: {
+        requireAuth,
+        handleSessionStatus: vi.fn(),
+        handleSessionCreate: vi.fn(),
+        handlePasskeyStatus: vi.fn(),
+        handlePasskeyAuthenticationOptions: vi.fn(),
+        handlePasskeyAuthenticationVerify: vi.fn(),
+        handlePasskeyRegistrationOptions: vi.fn(),
+        handlePasskeyRegistrationVerify: vi.fn(),
+        handlePasskeyList: vi.fn(),
+        handlePasskeyRevoke: vi.fn(),
+        handleResetAuth: vi.fn(),
+      },
+      readSettingsFromDiskMigrated: vi.fn(async () => ({})),
+      normalizeTunnelSessionTtlMs: vi.fn(),
+    });
+
+    app.use('/api/preview/proxy', (_req, res) => res.json({ reached: true }));
+
+    await request(app)
+      .get('/api/preview/proxy/abc123/?oc_preview_token=preview-secret')
+      .expect(200, { reached: true });
+
+    await request(app)
+      .get('/api/preview/proxy/abc123/')
+      .set('Cookie', 'oc_preview_token=preview-secret')
+      .expect(200, { reached: true });
+
+    await request(app)
+      .get('/api/preview/proxy/abc123/')
+      .expect(401, 'Authentication required');
+
+    expect(requireAuth).toHaveBeenCalledTimes(1);
+  });
 });
 
 describe('client auth routes', () => {
