@@ -1596,8 +1596,6 @@ export const settingsDict = {
   'settings.openchamber.visual.field.showToolFileIcons': '显示工具文件图标',
   'settings.openchamber.visual.field.showTurnChangedFilesAria': '显示已完成回合的更改文件',
   'settings.openchamber.visual.field.showTurnChangedFiles': '显示已完成回合的更改文件',
-  'settings.openchamber.visual.field.showMobileStatusBarAria': '显示移动端状态栏',
-  'settings.openchamber.visual.field.showMobileStatusBar': '显示移动端状态栏',
   'settings.openchamber.visual.field.showDotfilesAria': '显示点文件',
   'settings.openchamber.visual.field.showDotfiles': '显示点文件',
   'settings.openchamber.visual.field.queueMessagesByDefaultAria': '默认排队消息',

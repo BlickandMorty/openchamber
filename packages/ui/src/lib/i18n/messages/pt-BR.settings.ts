@@ -1596,8 +1596,6 @@ export const settingsDict = {
   "settings.openchamber.visual.field.showToolFileIcons": "Mostrar ícones de arquivos de ferramentas",
   "settings.openchamber.visual.field.showTurnChangedFilesAria": "Mostrar arquivos alterados em turnos concluídos",
   "settings.openchamber.visual.field.showTurnChangedFiles": "Mostrar arquivos alterados em turnos concluídos",
-  "settings.openchamber.visual.field.showMobileStatusBarAria": "Mostrar barra de status móvel",
-  "settings.openchamber.visual.field.showMobileStatusBar": "Mostrar barra de status móvel",
   "settings.openchamber.visual.field.showDotfilesAria": "Mostrar arquivos ocultos",
   "settings.openchamber.visual.field.showDotfiles": "Mostrar arquivos ocultos",
   "settings.openchamber.visual.field.queueMessagesByDefaultAria": "Colocar mensagens na fila por padrão",

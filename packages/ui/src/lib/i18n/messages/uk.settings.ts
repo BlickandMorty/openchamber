@@ -1596,8 +1596,6 @@ export const settingsDict = {
   "settings.openchamber.visual.field.showToolFileIcons": "Показати значки файлів інструментів",
   "settings.openchamber.visual.field.showTurnChangedFilesAria": "Показати змінені файли для завершених ходів",
   "settings.openchamber.visual.field.showTurnChangedFiles": "Показати змінені файли для завершених ходів",
-  "settings.openchamber.visual.field.showMobileStatusBarAria": "Показати рядок стану мобільного пристрою",
-  "settings.openchamber.visual.field.showMobileStatusBar": "Показати мобільний рядок стану",
   "settings.openchamber.visual.field.showDotfilesAria": "Показати dotfiles",
   "settings.openchamber.visual.field.showDotfiles": "Показати dotfiles",
   "settings.openchamber.visual.field.queueMessagesByDefaultAria": "Ставити повідомлення в чергу за замовчуванням",

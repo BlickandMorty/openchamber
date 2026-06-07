@@ -448,19 +448,18 @@ export const MobileSessionPanelTrigger: React.FC<MobileSessionPanelTriggerProps>
 }) => {
   const { t } = useI18n();
   const isMobile = useUIStore((state) => state.isMobile);
-  const showMobileSessionStatusBar = useUIStore((state) => state.showMobileSessionStatusBar);
   const open = useUIStore((state) => state.mobileSessionPanelOpen);
   const setOpen = useUIStore((state) => state.setMobileSessionPanelOpen);
 
   // Ensure the cross-project session list is loaded once, so the panel reflects
   // every project, not just the active directory.
   React.useEffect(() => {
-    if (isMobile && showMobileSessionStatusBar) {
+    if (isMobile) {
       void ensureGlobalSessionsLoaded();
     }
-  }, [isMobile, showMobileSessionStatusBar]);
+  }, [isMobile]);
 
-  if (!isMobile || !showMobileSessionStatusBar) {
+  if (!isMobile) {
     return null;
   }
 
@@ -493,6 +492,7 @@ export const MobileSessionStatusBar: React.FC<MobileSessionStatusBarProps> = ({
 }) => {
   const { t } = useI18n();
   const { currentTheme } = useThemeSystem();
+  const isMobile = useUIStore((state) => state.isMobile);
   const sessions = useAllProjectSessions();
   const currentSessionId = useSessionUIStore((state) => state.currentSessionId);
   const sessionStatus = useAllSessionStatuses();
@@ -500,8 +500,6 @@ export const MobileSessionStatusBar: React.FC<MobileSessionStatusBarProps> = ({
   const openNewSessionDraft = useSessionUIStore((state) => state.openNewSessionDraft);
   const getContextUsage = useSessionUIStore((state) => state.getContextUsage);
   const getCurrentModel = useConfigStore((state) => state.getCurrentModel);
-  const isMobile = useUIStore((state) => state.isMobile);
-  const showMobileSessionStatusBar = useUIStore((state) => state.showMobileSessionStatusBar);
   const open = useUIStore((state) => state.mobileSessionPanelOpen);
   const setOpen = useUIStore((state) => state.setMobileSessionPanelOpen);
 
@@ -656,7 +654,7 @@ export const MobileSessionStatusBar: React.FC<MobileSessionStatusBarProps> = ({
     </div>
   ), [t, totalRunning, totalUnread, contextUsage, projects, filterProjectId, setFilterProjectId, formatProjectLabel, currentTheme, getProjectStatus, handleNewChat, setOpen]);
 
-  if (!isMobile || !showMobileSessionStatusBar) {
+  if (!isMobile) {
     return null;
   }
 
