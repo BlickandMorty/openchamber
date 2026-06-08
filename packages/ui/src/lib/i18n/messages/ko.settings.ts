@@ -47,6 +47,7 @@ export const settingsDict = {
   'settings.page.notifications.title': '알림',
   'settings.page.voice.title': '음성',
   'settings.page.tunnel.title': '원격 터널',
+  'settings.page.about.title': '정보',
   'settings.page.snippets.title': '스니펫',
   'settings.snippets.sidebar.title': '스니펫',
   'settings.snippets.sidebar.total': '총 {count}개',

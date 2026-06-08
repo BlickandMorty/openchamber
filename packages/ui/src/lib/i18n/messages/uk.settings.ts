@@ -47,6 +47,7 @@ export const settingsDict = {
   "settings.page.notifications.title": "Сповіщення",
   "settings.page.voice.title": "Голос",
   "settings.page.tunnel.title": "Віддалений тунель",
+  "settings.page.about.title": "Про застосунок",
   "settings.page.snippets.title": "Сніпети",
   "settings.snippets.sidebar.title": "Сніпети",
   "settings.snippets.sidebar.total": "Всього: {count}",

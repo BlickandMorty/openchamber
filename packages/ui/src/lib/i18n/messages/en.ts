@@ -38,6 +38,7 @@ export const dict = {
   'mobile.menu.titleAria': 'Workspace tools',
   'mobile.menu.files': 'Files',
   'mobile.menu.changes': 'Changes',
+  'mobile.menu.update': 'Update',
   'mobile.menu.settings': 'Settings',
   'mobile.sessions.newChatCta': 'New chat in {project}',
   'mobile.sessions.dateGroup.today': 'Today',

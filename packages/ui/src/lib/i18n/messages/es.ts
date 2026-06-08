@@ -39,6 +39,7 @@ export const dict: Record<I18nKey, string> = {
   "mobile.menu.titleAria": "Herramientas del espacio de trabajo",
   "mobile.menu.files": "Archivos",
   "mobile.menu.changes": "Cambios",
+  "mobile.menu.update": "Actualizar",
   "mobile.menu.settings": "Ajustes",
   "mobile.sessions.newChatCta": "Nuevo chat en {project}",
   "mobile.sessions.dateGroup.today": "Hoy",

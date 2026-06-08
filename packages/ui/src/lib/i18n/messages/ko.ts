@@ -39,6 +39,7 @@ export const dict: Record<I18nKey, string> = {
   'mobile.menu.titleAria': '작업 공간 도구',
   'mobile.menu.files': '파일',
   'mobile.menu.changes': '변경사항',
+  'mobile.menu.update': '업데이트',
   'mobile.menu.settings': '설정',
   'mobile.sessions.newChatCta': '{project}에서 새 채팅',
   'mobile.sessions.dateGroup.today': '오늘',

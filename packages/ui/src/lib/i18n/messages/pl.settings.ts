@@ -1060,6 +1060,7 @@ export const settingsDict = {
   'settings.page.skills.title': 'Umiejętności',
   'settings.page.skillsCatalog.title': 'Katalog umiejętności',
   'settings.page.tunnel.title': 'Zdalny Tunel',
+  'settings.page.about.title': 'O aplikacji',
   'settings.page.snippets.title': 'Fragmenty',
   'settings.snippets.sidebar.title': 'Fragmenty',
   'settings.snippets.sidebar.total': 'Suma: {count}',

@@ -47,6 +47,7 @@ export const settingsDict = {
   "settings.page.notifications.title": "Notificações",
   "settings.page.voice.title": "Voz",
   "settings.page.tunnel.title": "Túnel remoto",
+  "settings.page.about.title": "Sobre",
   "settings.page.snippets.title": "Snippets",
   "settings.snippets.sidebar.title": "Snippets",
   "settings.snippets.sidebar.total": "Total: {count}",

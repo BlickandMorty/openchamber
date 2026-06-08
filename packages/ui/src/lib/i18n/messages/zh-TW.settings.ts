@@ -44,6 +44,7 @@
   'settings.page.notifications.title': '通知',
   'settings.page.voice.title': '語音',
   'settings.page.tunnel.title': 'Remote Tunnel',
+  'settings.page.about.title': '關於',
   'settings.page.snippets.title': '程式片段',
   'settings.snippets.sidebar.title': '程式片段',
   'settings.snippets.sidebar.total': '共 {count} 個',

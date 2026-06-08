@@ -47,6 +47,7 @@ export const settingsDict = {
   'settings.page.notifications.title': '通知',
   'settings.page.voice.title': '语音',
   'settings.page.tunnel.title': '远程隧道',
+  'settings.page.about.title': '关于',
   'settings.page.snippets.title': '代码片段',
   'settings.snippets.sidebar.title': '代码片段',
   'settings.snippets.sidebar.total': '共 {count} 个',
