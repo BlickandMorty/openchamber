@@ -3,40 +3,21 @@ import { DateTime } from 'luxon';
 import parser from 'cron-parser';
 import { expandSnippets } from '../opencode/snippets.js';
 
-const SCHEDULED_PLACEHOLDER_PATTERN = /\{\{\s*scheduled_time(_\w+)?\s*\}\}/gi;
-
-const resolveScheduledTimeValue = (suffix, scheduledTimeMs, zone) => {
-  const dt = DateTime.fromMillis(scheduledTimeMs, { zone });
-  if (!dt.isValid) {
-    return '';
-  }
-  switch (suffix) {
-    case '_date':
-      return dt.toFormat('yyyy-LL-dd');
-    case '_time':
-      return dt.toFormat('HH:mm');
-    case '_iso':
-      return dt.toISO();
-    case '_unix':
-      return String(Math.floor(scheduledTimeMs / 1000));
-    case '_offset':
-    case '': {
-      const stamp = dt.toFormat('yyyy-LL-dd HH:mm');
-      const offset = dt.toFormat('ZZZZ');
-      return offset ? `${stamp} ${offset}` : stamp;
-    }
-    default:
-      return '';
-  }
-};
+const SCHEDULED_PLACEHOLDER_PATTERN = /\{\{\s*scheduled_time(?::\s*([^}]*?))?\s*\}\}/gi;
 
 export const expandScheduledTaskPlaceholders = (text, scheduledTimeMs, zone) => {
   if (typeof text !== 'string' || !Number.isFinite(scheduledTimeMs)) {
     return text;
   }
-  return text.replace(SCHEDULED_PLACEHOLDER_PATTERN, (_match, suffix) => {
-    const value = resolveScheduledTimeValue(suffix || '', scheduledTimeMs, zone);
-    return value;
+  return text.replace(SCHEDULED_PLACEHOLDER_PATTERN, (_match, formatToken) => {
+    const dt = DateTime.fromMillis(scheduledTimeMs, { zone });
+    if (!dt.isValid) {
+      return '';
+    }
+    if (typeof formatToken === 'string' && formatToken.trim().length > 0) {
+      return dt.toFormat(formatToken.trim());
+    }
+    return dt.toFormat('yyyy-LL-dd HH:mm ZZZZ');
   });
 };
 
