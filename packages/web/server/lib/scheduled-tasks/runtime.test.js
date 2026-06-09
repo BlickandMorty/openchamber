@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { computeNextRunAt, formatScheduledSessionTitle, parseScheduledCommandPrompt } from './runtime.js';
+import { computeNextRunAt, expandScheduledTaskPlaceholders, formatScheduledSessionTitle, parseScheduledCommandPrompt } from './runtime.js';
 
 describe('scheduled-tasks runtime helpers', () => {
   it('computes next daily run in timezone', () => {
@@ -96,5 +96,107 @@ describe('scheduled-tasks runtime helpers', () => {
   it('returns null when prompt is not a slash command', () => {
     expect(parseScheduledCommandPrompt('Summarize open issues')).toBeNull();
     expect(parseScheduledCommandPrompt('/')).toBeNull();
+  });
+});
+
+describe('expandScheduledTaskPlaceholders', () => {
+  const scheduledTimeMs = Date.UTC(2025, 5, 15, 9, 30, 0);
+
+  it('replaces {{scheduled_time}} with formatted datetime and offset', () => {
+    const result = expandScheduledTaskPlaceholders(
+      'Review changes since {{scheduled_time}}',
+      scheduledTimeMs,
+      'UTC',
+    );
+    expect(result).toBe('Review changes since 2025-06-15 09:30 UTC');
+  });
+
+  it('replaces {{scheduled_time_date}} with date only', () => {
+    const result = expandScheduledTaskPlaceholders(
+      'Generate report for {{scheduled_time_date}}',
+      scheduledTimeMs,
+      'UTC',
+    );
+    expect(result).toBe('Generate report for 2025-06-15');
+  });
+
+  it('replaces {{scheduled_time_time}} with time only', () => {
+    const result = expandScheduledTaskPlaceholders(
+      'The task runs at {{scheduled_time_time}}',
+      scheduledTimeMs,
+      'UTC',
+    );
+    expect(result).toBe('The task runs at 09:30');
+  });
+
+  it('replaces {{scheduled_time_iso}} with ISO 8601 string', () => {
+    const result = expandScheduledTaskPlaceholders(
+      'Timestamp: {{scheduled_time_iso}}',
+      scheduledTimeMs,
+      'UTC',
+    );
+    expect(result).toBe('Timestamp: 2025-06-15T09:30:00.000Z');
+  });
+
+  it('replaces {{scheduled_time_unix}} with unix epoch seconds', () => {
+    const result = expandScheduledTaskPlaceholders(
+      'Epoch: {{scheduled_time_unix}}',
+      scheduledTimeMs,
+      'UTC',
+    );
+    expect(result).toBe(`Epoch: ${Math.floor(scheduledTimeMs / 1000)}`);
+  });
+
+  it('replaces multiple placeholders in one prompt', () => {
+    const result = expandScheduledTaskPlaceholders(
+      'Date={{scheduled_time_date}} Time={{scheduled_time_time}}',
+      scheduledTimeMs,
+      'UTC',
+    );
+    expect(result).toBe('Date=2025-06-15 Time=09:30');
+  });
+
+  it('respects timezone for non-UTC zones', () => {
+    const result = expandScheduledTaskPlaceholders(
+      '{{scheduled_time_date}} {{scheduled_time_time}}',
+      scheduledTimeMs,
+      'America/New_York',
+    );
+    expect(result).toBe('2025-06-15 05:30');
+  });
+
+  it('returns original text when no placeholders present', () => {
+    const text = 'No placeholders here';
+    const result = expandScheduledTaskPlaceholders(text, scheduledTimeMs, 'UTC');
+    expect(result).toBe(text);
+  });
+
+  it('returns original text when scheduledTimeMs is not finite', () => {
+    const text = 'Hello {{scheduled_time}}';
+    const result = expandScheduledTaskPlaceholders(text, NaN, 'UTC');
+    expect(result).toBe(text);
+  });
+
+  it('returns original text when input is not a string', () => {
+    const result = expandScheduledTaskPlaceholders(null, scheduledTimeMs, 'UTC');
+    expect(result).toBeNull();
+  });
+
+  it('handles whitespace inside placeholders', () => {
+    const result = expandScheduledTaskPlaceholders(
+      '{{ scheduled_time_date }}',
+      scheduledTimeMs,
+      'UTC',
+    );
+    expect(result).toBe('2025-06-15');
+  });
+
+  it('replaces unknown suffix with empty string', () => {
+    const result = expandScheduledTaskPlaceholders(
+      '{{scheduled_time_unknown}}',
+      scheduledTimeMs,
+      'UTC',
+    );
+    expect(result).toBe('');
   });
 });
