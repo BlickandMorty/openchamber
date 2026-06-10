@@ -1929,7 +1929,6 @@ export const OpenChamberVisualSettings: React.FC<OpenChamberVisualSettingsProps>
 
                                     {shouldShow('fileViewerPreview') && (
                                         <div
-                                            data-settings-item="chat.queue-mode"
                                             className="group flex cursor-pointer items-center gap-2 py-0.5"
                                             role="button"
                                             tabIndex={0}
@@ -1955,7 +1954,7 @@ export const OpenChamberVisualSettings: React.FC<OpenChamberVisualSettingsProps>
 
                                     {shouldShow('queueMode') && (
                                         <div
-                                            data-settings-item="chat.persist-drafts"
+                                            data-settings-item="chat.queue-mode"
                                             className="group flex cursor-pointer items-center gap-2 py-0.5"
                                             role="button"
                                             tabIndex={0}
@@ -1989,6 +1988,7 @@ export const OpenChamberVisualSettings: React.FC<OpenChamberVisualSettingsProps>
 
                                     {shouldShow('persistDraft') && (
                                         <div
+                                            data-settings-item="chat.persist-drafts"
                                             className="group flex cursor-pointer items-center gap-2 py-0.5"
                                             role="button"
                                             tabIndex={0}
