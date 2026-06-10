@@ -1470,7 +1470,7 @@ export const OpenChamberVisualSettings: React.FC<OpenChamberVisualSettingsProps>
                                     )}
 
                                     {shouldShow('activityRenderMode') && chatRenderMode === 'sorted' && (
-                                        <section data-settings-item="chat.activity-default-mode" className="p-2 md:col-span-2">
+                                        <section className="p-2 md:col-span-2">
                                             <h4 className="typography-ui-header font-medium text-foreground">{t('settings.openchamber.visual.section.activityDefault')}</h4>
                                             <div role="radiogroup" aria-label={t('settings.openchamber.visual.section.activityDefaultAria')} className="mt-0.5 space-y-0">
                                                 {ACTIVITY_RENDER_MODE_OPTIONS.map((option) => {
@@ -1727,7 +1727,6 @@ export const OpenChamberVisualSettings: React.FC<OpenChamberVisualSettingsProps>
 
                                     {shouldShow('reasoning') && showReasoningTraces && (
                                         <div
-                                            data-settings-item="chat.collapsible-reasoning"
                                             className="group flex cursor-pointer items-center gap-2 py-0.5"
                                             role="button"
                                             tabIndex={0}

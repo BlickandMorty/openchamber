@@ -698,7 +698,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onClose, forceMobile
       if (cancelled) {
         return;
       }
-      const escapedId = typeof CSS !== 'undefined' && CSS.escape ? CSS.escape(targetId) : targetId.replace(/"/g, '\\"');
+      const escapedId = typeof CSS !== 'undefined' && CSS.escape
+        ? CSS.escape(targetId)
+        : targetId.replace(/[^a-zA-Z0-9_-]/g, '\\$&');
       const target = containerRef.current?.querySelector<HTMLElement>(`[data-settings-item="${escapedId}"]`);
       if (!target) {
         return;
