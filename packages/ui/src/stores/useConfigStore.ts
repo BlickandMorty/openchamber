@@ -715,41 +715,32 @@ interface DirectoryScopedConfig {
     defaultProviders: { [key: string]: string };
 }
 
-const clearProviderDataFromDirectoryScoped = (
-    directoryScoped: Record<string, DirectoryScopedConfig>,
-): Record<string, DirectoryScopedConfig> => {
-    const next: Record<string, DirectoryScopedConfig> = {};
+/**
+ * Lift the active directory's cached provider/agent snapshot into the top-level
+ * fields the pickers read (`providers`, `agents`, selections), so a cold start
+ * paints instantly from persisted data. Falls back to whatever top-level data
+ * was persisted; handles legacy persisted blobs that only stored directoryScoped.
+ */
+const hydrateActiveDirectorySnapshot = <T extends Partial<ConfigStore>>(merged: T): T => {
+    const directoryScoped = merged.directoryScoped;
+    const activeKey = merged.activeDirectoryKey;
+    if (!directoryScoped || !activeKey) return merged;
+    const snapshot = directoryScoped[activeKey];
+    if (!snapshot) return merged;
 
-    for (const [directoryKey, snapshot] of Object.entries(directoryScoped)) {
-        next[directoryKey] = {
-            ...snapshot,
-            providers: [],
-            defaultProviders: {},
-        };
+    const next: Partial<ConfigStore> = { ...merged };
+    if ((!merged.providers || merged.providers.length === 0) && snapshot.providers?.length) {
+        next.providers = snapshot.providers;
     }
-
-    return next;
-};
-
-const stripProviderCacheFromPersistedState = (persistedState: unknown): Partial<ConfigStore> => {
-    if (!persistedState || typeof persistedState !== 'object') {
-        return {};
+    if ((!merged.agents || merged.agents.length === 0) && snapshot.agents?.length) {
+        next.agents = snapshot.agents;
     }
-
-    const persisted = persistedState as Partial<ConfigStore>;
-    const sanitized: Partial<ConfigStore> = {
-        ...persisted,
-        providers: [],
-        defaultProviders: {},
-    };
-
-    if (persisted.directoryScoped) {
-        sanitized.directoryScoped = clearProviderDataFromDirectoryScoped(
-            persisted.directoryScoped as Record<string, DirectoryScopedConfig>,
-        );
+    if (!merged.defaultProviders || Object.keys(merged.defaultProviders).length === 0) {
+        if (snapshot.defaultProviders && Object.keys(snapshot.defaultProviders).length > 0) {
+            next.defaultProviders = snapshot.defaultProviders;
+        }
     }
-
-    return sanitized;
+    return next as T;
 };
 
 interface ConfigStore {
@@ -1204,14 +1195,20 @@ export const useConfigStore = create<ConfigStore>()(
                         return;
                     }
 
+                    // Stale-while-revalidate: when a cached snapshot already
+                    // populated the pickers, refresh in the background so the UI
+                    // stays instant but never shows stale provider/agent data for
+                    // longer than one fetch. Only block when there is nothing to show.
                     if (snapshotHadProviders) {
-                        markStartupTrace('activateDirectory:skipProviders', { directoryKey });
+                        markStartupTrace('activateDirectory:refreshProvidersBackground', { directoryKey });
+                        void get().loadProviders({ directory: fromDirectoryKey(directoryKey), source: 'activateDirectory:refresh' });
                     } else {
                         await get().loadProviders({ directory: fromDirectoryKey(directoryKey), source: 'activateDirectory' });
                     }
 
                     if (snapshotHadAgents) {
-                        markStartupTrace('activateDirectory:skipAgents', { directoryKey });
+                        markStartupTrace('activateDirectory:refreshAgentsBackground', { directoryKey });
+                        void get().loadAgents({ directory: fromDirectoryKey(directoryKey), source: 'activateDirectory:refresh' });
                     } else {
                         await get().loadAgents({ directory: fromDirectoryKey(directoryKey), source: 'activateDirectory' });
                     }
@@ -2634,7 +2631,11 @@ export const useConfigStore = create<ConfigStore>()(
                             if (debug) console.log("Initializing app...");
                             markStartupTrace('initApp:skipped', { reason: 'checkConnection already verified health' });
 
-                            get().invalidateProviderCache();
+                            // Stale-while-revalidate: do NOT invalidate the hydrated
+                            // provider snapshot here. The pickers keep showing the
+                            // last-known providers/agents while loadProviders/loadAgents
+                            // below fetch fresh data and overwrite on success. Clearing
+                            // first would blank the UI for the duration of the fetch.
 
                             // Config (providers/agents/defaults) lives at the PROJECT level. If the
                             // app starts on a worktree directory, load config under the owning
@@ -2736,20 +2737,30 @@ export const useConfigStore = create<ConfigStore>()(
             {
                 name: "config-store",
                 storage: createJSONStorage(() => getSafeStorage()),
-                merge: (persistedState, currentState) => ({
-                    ...currentState,
-                    ...stripProviderCacheFromPersistedState(persistedState),
-                }),
+                merge: (persistedState, currentState) =>
+                    hydrateActiveDirectorySnapshot({
+                        ...currentState,
+                        ...(persistedState && typeof persistedState === 'object'
+                            ? (persistedState as Partial<ConfigStore>)
+                            : {}),
+                    }),
+                // Stale-while-revalidate: persist the last-known provider/agent
+                // snapshots so the model/agent pickers paint instantly on cold
+                // start. Freshness is guaranteed by the background refresh in
+                // initializeApp() / activateDirectory() (which overwrite these on
+                // success) and by the provider/agent config-change subscriptions.
                 partialize: (state) => ({
                     activeDirectoryKey: state.activeDirectoryKey,
-                    directoryScoped: clearProviderDataFromDirectoryScoped(state.directoryScoped),
+                    directoryScoped: state.directoryScoped,
+                    providers: state.providers,
+                    agents: state.agents,
                     currentProviderId: state.currentProviderId,
                     currentModelId: state.currentModelId,
                     currentVariant: state.currentVariant,
                     currentAgentName: state.currentAgentName,
                     selectedProviderId: state.selectedProviderId,
                     agentModelSelections: state.agentModelSelections,
-                    defaultProviders: {},
+                    defaultProviders: state.defaultProviders,
                     settingsDefaultModel: state.settingsDefaultModel,
                     settingsDefaultVariant: state.settingsDefaultVariant,
                     settingsDefaultAgent: state.settingsDefaultAgent,
