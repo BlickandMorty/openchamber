@@ -383,40 +383,83 @@ const TableWrapper: React.FC<{ children?: React.ReactNode; className?: string }>
   );
 };
 
+const MERMAID_RENDER_DELAY_MS = 80;
+
 const MermaidBlock: React.FC<{ source: string; mode: 'svg' | 'ascii' }> = ({ source, mode }) => {
   const { t } = useI18n();
   const currentTheme = useCurrentMermaidTheme();
   const { isMobile, isTablet } = useDeviceInfo();
   const [copied, setCopied] = React.useState(false);
   const [downloaded, setDownloaded] = React.useState(false);
+  const [svg, setSvg] = React.useState('');
+  const [ascii, setAscii] = React.useState('');
 
-  const svg = React.useMemo(() => {
-    if (mode !== 'svg') return '';
-    try {
-      return renderMermaidSVG(source, {
-        bg: currentTheme.colors.surface.elevated,
-        fg: currentTheme.colors.surface.foreground,
-        line: currentTheme.colors.interactive.border,
-        accent: currentTheme.colors.primary.base,
-        muted: currentTheme.colors.surface.mutedForeground,
-        surface: currentTheme.colors.surface.muted,
-        border: currentTheme.colors.interactive.border,
-        transparent: true,
-        font: 'IBM Plex Sans, sans-serif',
+  React.useEffect(() => {
+    if (typeof window === 'undefined') {
+      try {
+        setSvg(mode === 'svg' ? renderMermaidSVG(source, {
+          bg: currentTheme.colors.surface.elevated,
+          fg: currentTheme.colors.surface.foreground,
+          line: currentTheme.colors.interactive.border,
+          accent: currentTheme.colors.primary.base,
+          muted: currentTheme.colors.surface.mutedForeground,
+          surface: currentTheme.colors.surface.muted,
+          border: currentTheme.colors.interactive.border,
+          transparent: true,
+          font: 'IBM Plex Sans, sans-serif',
+        }) : '');
+        setAscii(mode === 'ascii' ? renderMermaidASCII(source) : '');
+      } catch {
+        setSvg('');
+        setAscii('');
+      }
+      return;
+    }
+
+    let cancelled = false;
+    let frame: number | null = null;
+    setSvg('');
+    setAscii('');
+
+    const timer = window.setTimeout(() => {
+      frame = window.requestAnimationFrame(() => {
+        frame = null;
+        if (cancelled) {
+          return;
+        }
+
+        try {
+          if (mode === 'svg') {
+            setSvg(renderMermaidSVG(source, {
+              bg: currentTheme.colors.surface.elevated,
+              fg: currentTheme.colors.surface.foreground,
+              line: currentTheme.colors.interactive.border,
+              accent: currentTheme.colors.primary.base,
+              muted: currentTheme.colors.surface.mutedForeground,
+              surface: currentTheme.colors.surface.muted,
+              border: currentTheme.colors.interactive.border,
+              transparent: true,
+              font: 'IBM Plex Sans, sans-serif',
+            }));
+            return;
+          }
+
+          setAscii(renderMermaidASCII(source));
+        } catch {
+          setSvg('');
+          setAscii('');
+        }
       });
-    } catch {
-      return '';
-    }
-  }, [currentTheme, mode, source]);
+    }, MERMAID_RENDER_DELAY_MS);
 
-  const ascii = React.useMemo(() => {
-    if (mode !== 'ascii') return '';
-    try {
-      return renderMermaidASCII(source);
-    } catch {
-      return '';
-    }
-  }, [mode, source]);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+      if (frame !== null) {
+        window.cancelAnimationFrame(frame);
+      }
+    };
+  }, [currentTheme, mode, source]);
 
   const copyVisibilityClass = isMobile || isTablet ? 'opacity-100' : 'opacity-0 group-hover:opacity-100';
 
