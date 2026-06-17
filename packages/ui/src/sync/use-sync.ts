@@ -497,17 +497,6 @@ export function useSync() {
             : Promise.resolve(),
           shouldLoadMessages ? loadMessages(sessionID, { isStale }) : Promise.resolve(),
         ])
-
-        // Progressive mount: after the initial page resolves, if the session
-        // isn't stale and the server indicated more messages, dispatch a
-        // second fetch to prepend older history. The user sees the first 50
-        // messages immediately; the rest arrive ~200–400ms later.
-        if (!isStale()) {
-          const currentMeta = getMetaFor(sessionID)
-          if (currentMeta.cursor && !currentMeta.complete) {
-            loadMessages(sessionID, { before: currentMeta.cursor, mode: "prepend", isStale })
-          }
-        }
       })()
 
       syncSessionInflightByKey.set(key, promise)
