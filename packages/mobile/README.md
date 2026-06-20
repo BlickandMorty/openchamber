@@ -6,18 +6,31 @@ The mobile package reuses the web build, then rewrites `mobile.html` to `index.h
 
 ## Commands
 
-- `bun run build` builds `packages/web` and prepares mobile web assets.
-- `bun run sync` prepares assets and runs `cap sync`.
-- `bun run add:ios` creates the native iOS project.
-- `bun run add:android` creates the native Android project.
-- `bun run build:android:debug` builds a debug Android APK without launching an emulator.
-- `bun run build:ios:simulator` builds an iOS Simulator app without launching Xcode or Simulator.
-- `bun run sim:run` boots a simulator if needed, installs the built iOS app, and launches it.
-- `bun run sim:serve` starts `serve-sim` in detached JSON mode and prints the browser preview URL.
-- `bun run sim:list` lists running `serve-sim` streams.
-- `bun run sim:kill` stops running `serve-sim` streams.
-- `bun run open:ios` opens the iOS project.
-- `bun run open:android` opens the Android project.
+Run these from `packages/mobile`, or use the root `mobile:*` aliases.
+
+- `bun run build`: builds `packages/web` and prepares mobile web assets.
+- `bun run sync`: prepares assets and runs `cap sync`.
+- `bun run add:ios`: creates the native iOS project.
+- `bun run add:android`: creates the native Android project.
+- `bun run build:android:debug`: builds a debug Android APK without launching an emulator.
+- `bun run build:ios:simulator`: builds an iOS Simulator app without launching Xcode or Simulator.
+- `bun run sim:run`: boots a simulator if needed, installs the built iOS app, and launches it.
+- `bun run sim:serve`: starts `serve-sim` in detached JSON mode and prints the browser preview URL.
+- `bun run sim:list`: lists running `serve-sim` streams.
+- `bun run sim:kill`: stops running `serve-sim` streams.
+- `bun run open:ios`: opens the iOS project.
+- `bun run open:android`: opens the Android project.
+
+## Headless Quickstart
+
+```sh
+bun run build
+bun run sync
+bun run build:ios:simulator
+bun run build:android:debug
+```
+
+These commands build and sync the native projects without launching Xcode, Android Studio, Simulator, or an emulator.
 
 ## Local Tooling
 
@@ -28,3 +41,22 @@ The default scripts assume the local Homebrew/Xcode paths prepared for this work
 - Android SDK: `/opt/homebrew/share/android-commandlinetools`
 
 Override `DEVELOPER_DIR`, `JAVA_HOME`, `ANDROID_HOME`, or `ANDROID_SDK_ROOT` when using a different local setup.
+
+Required local tools:
+
+- Xcode with iOS Simulator support.
+- CocoaPods for iOS dependency installation.
+- JDK 21 for Android Gradle builds.
+- Android SDK command-line tools with platform/build-tools 35.
+
+## Troubleshooting
+
+- If `xcodebuild` reports that the active developer directory is Command Line Tools, keep using the provided scripts or set `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer`.
+- If Android builds fail with `Unable to locate a Java Runtime` or `source release: 21`, install/use JDK 21 and set `JAVA_HOME` accordingly.
+- If Android SDK packages are missing, install `platform-tools`, `platforms;android-35`, and `build-tools;35.0.0`, then accept SDK licenses.
+- If CocoaPods cannot find Capacitor pods after reinstalling dependencies, run `bun install` from the workspace root, then rerun `bun run sync`.
+- If `serve-sim` preview says the stream is not producing frames, check the raw MJPEG stream before assuming the simulator stopped. In prior testing the raw stream worked while the browser preview UI stayed stale.
+
+## Generated Assets
+
+The native projects currently use Capacitor-generated launcher and splash assets. Replace them before release branding work.
