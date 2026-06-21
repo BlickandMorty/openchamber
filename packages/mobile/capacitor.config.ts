@@ -7,6 +7,17 @@ const config: CapacitorConfig = {
   server: {
     androidScheme: 'https',
   },
+  plugins: {
+    Keyboard: {
+      resize: 'native',
+      resizeOnFullScreen: true,
+      autoBackdropColor: 'dom',
+    },
+    StatusBar: {
+      overlaysWebView: true,
+      style: 'DEFAULT',
+    },
+  },
 };
 
 export default config;

@@ -1,22 +1,53 @@
 PODS:
+  - AparajitaCapacitorSecureStorage (8.0.0):
+    - Capacitor
+    - KeychainSwift (~> 21.0)
   - Capacitor (8.4.1):
     - CapacitorCordova
+  - CapacitorApp (8.1.0):
+    - Capacitor
   - CapacitorCordova (8.4.1)
+  - CapacitorKeyboard (8.0.5):
+    - Capacitor
+  - CapacitorStatusBar (8.0.2):
+    - Capacitor
+  - KeychainSwift (21.0.0)
 
 DEPENDENCIES:
+  - "AparajitaCapacitorSecureStorage (from `../../../../node_modules/.bun/@aparajita+capacitor-secure-storage@8.0.0/node_modules/@aparajita/capacitor-secure-storage`)"
   - "Capacitor (from `../../../../node_modules/.bun/@capacitor+ios@8.4.1+767ac80cbab8ae50/node_modules/@capacitor/ios`)"
+  - "CapacitorApp (from `../../../../node_modules/.bun/@capacitor+app@8.1.0+767ac80cbab8ae50/node_modules/@capacitor/app`)"
   - "CapacitorCordova (from `../../../../node_modules/.bun/@capacitor+ios@8.4.1+767ac80cbab8ae50/node_modules/@capacitor/ios`)"
+  - "CapacitorKeyboard (from `../../../../node_modules/.bun/@capacitor+keyboard@8.0.5+767ac80cbab8ae50/node_modules/@capacitor/keyboard`)"
+  - "CapacitorStatusBar (from `../../../../node_modules/.bun/@capacitor+status-bar@8.0.2+767ac80cbab8ae50/node_modules/@capacitor/status-bar`)"
+
+SPEC REPOS:
+  trunk:
+    - KeychainSwift
 
 EXTERNAL SOURCES:
+  AparajitaCapacitorSecureStorage:
+    :path: "../../../../node_modules/.bun/@aparajita+capacitor-secure-storage@8.0.0/node_modules/@aparajita/capacitor-secure-storage"
   Capacitor:
     :path: "../../../../node_modules/.bun/@capacitor+ios@8.4.1+767ac80cbab8ae50/node_modules/@capacitor/ios"
+  CapacitorApp:
+    :path: "../../../../node_modules/.bun/@capacitor+app@8.1.0+767ac80cbab8ae50/node_modules/@capacitor/app"
   CapacitorCordova:
     :path: "../../../../node_modules/.bun/@capacitor+ios@8.4.1+767ac80cbab8ae50/node_modules/@capacitor/ios"
+  CapacitorKeyboard:
+    :path: "../../../../node_modules/.bun/@capacitor+keyboard@8.0.5+767ac80cbab8ae50/node_modules/@capacitor/keyboard"
+  CapacitorStatusBar:
+    :path: "../../../../node_modules/.bun/@capacitor+status-bar@8.0.2+767ac80cbab8ae50/node_modules/@capacitor/status-bar"
 
 SPEC CHECKSUMS:
+  AparajitaCapacitorSecureStorage: 8128d05cafcb13b00448e20fb388a0edccd44b12
   Capacitor: 35242afe195b1e53c58ca1b827d1b444c5e6602b
+  CapacitorApp: 449ffe26375e96f8aaaee625ac6e01e5c57c8650
   CapacitorCordova: eebe6bcf807b1b06f3f48237650f96bbcd0eef09
+  CapacitorKeyboard: b6b0744890cdb1d9a96e2cafcc9253fdcc55de3b
+  CapacitorStatusBar: 01d5763b4ed720de5ce2edbc938de6a98f4c8f32
+  KeychainSwift: 4a71a45c802fd9e73906457c2dcbdbdc06c9419d
 
-PODFILE CHECKSUM: 142a3ef8f07250e68b791fb20b2bbe215af1f9de
+PODFILE CHECKSUM: da77bbc256d071a8f17b8ec1fe37587c9323fbca
 
 COCOAPODS: 1.16.2

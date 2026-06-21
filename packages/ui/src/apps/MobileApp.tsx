@@ -91,6 +91,85 @@ const isCapacitorMobileApp = (): boolean => {
   return window.location.protocol === 'capacitor:';
 };
 
+const useNativeMobileChrome = (): void => {
+  React.useEffect(() => {
+    if (!isCapacitorMobileApp()) return;
+
+    let disposed = false;
+    void import('@capacitor/status-bar').then(async ({ StatusBar, Style }) => {
+      if (disposed) return;
+      await StatusBar.setStyle({ style: Style.Default }).catch(() => undefined);
+      await StatusBar.setOverlaysWebView({ overlay: true }).catch(() => undefined);
+      await StatusBar.show().catch(() => undefined);
+    }).catch(() => undefined);
+
+    void import('@capacitor/keyboard').then(async ({ Keyboard }) => {
+      if (disposed) return;
+      await Keyboard.setAccessoryBarVisible({ isVisible: true }).catch(() => undefined);
+    }).catch(() => undefined);
+
+    return () => {
+      disposed = true;
+    };
+  }, []);
+};
+
+const useNativeMobileLifecycle = (onResume: () => void): void => {
+  React.useEffect(() => {
+    if (!isCapacitorMobileApp()) return;
+
+    let disposed = false;
+    const cleanup: Array<() => void> = [];
+
+    void import('@capacitor/app').then(async ({ App }) => {
+      if (disposed) return;
+      const state = await App.addListener('appStateChange', ({ isActive }) => {
+        document.documentElement.classList.toggle('oc-native-app-active', isActive);
+        if (isActive) onResume();
+      });
+      const resume = await App.addListener('resume', onResume);
+      if (disposed) {
+        void state.remove();
+        void resume.remove();
+        return;
+      }
+      cleanup.push(() => void state.remove(), () => void resume.remove());
+    }).catch(() => undefined);
+
+    return () => {
+      disposed = true;
+      cleanup.forEach((remove) => remove());
+    };
+  }, [onResume]);
+};
+
+const useNativeAndroidBackButton = (onBack: () => boolean): void => {
+  React.useEffect(() => {
+    if (!isCapacitorMobileApp()) return;
+
+    let disposed = false;
+    let remove: (() => void) | null = null;
+
+    void import('@capacitor/app').then(async ({ App }) => {
+      if (disposed) return;
+      const listener = await App.addListener('backButton', () => {
+        if (onBack()) return;
+        void App.minimizeApp().catch(() => undefined);
+      });
+      if (disposed) {
+        void listener.remove();
+        return;
+      }
+      remove = () => void listener.remove();
+    }).catch(() => undefined);
+
+    return () => {
+      disposed = true;
+      remove?.();
+    };
+  }, [onBack]);
+};
+
 const normalizePath = (value?: string | null): string =>
   (value || '').replace(/\\/g, '/').replace(/\/+$/g, '');
 
@@ -109,6 +188,12 @@ const formatTokens = (value: number): string => {
   if (value >= 1_000) return `${(value / 1_000).toFixed(1)}K`;
   return String(value);
 };
+
+const mobileInputKeyboardProps = {
+  autoComplete: 'off',
+  autoCorrect: 'off',
+  spellCheck: false,
+} as const;
 
 const getProjectLabel = (path: string): string => {
   const normalized = normalizePath(path);
@@ -140,7 +225,7 @@ const getProjectDisplayLabel = (project: ProjectEntry | null, fallbackDirectory:
 const MobileConnectionWelcome: React.FC<{ onConnected: () => void }> = ({ onConnected }) => {
   const { t } = useI18n();
   const conn = useMobileConnection(onConnected);
-  const { connections, isBusy, error, pendingConnection } = conn;
+  const { connections, isBusy, isPasswordBusy, error, pendingConnection } = conn;
   const [serverUrl, setServerUrl] = React.useState('');
   const [connectionName, setConnectionName] = React.useState('');
   const [clientToken, setClientToken] = React.useState('');
@@ -235,6 +320,7 @@ const MobileConnectionWelcome: React.FC<{ onConnected: () => void }> = ({ onConn
               </div>
             </div>
             <input
+              {...mobileInputKeyboardProps}
               value={password}
               onChange={(event) => setPassword(event.target.value)}
               placeholder={t('mobile.connect.password.placeholder')}
@@ -244,8 +330,8 @@ const MobileConnectionWelcome: React.FC<{ onConnected: () => void }> = ({ onConn
               className="h-12 w-full rounded-[16px] border border-border/70 bg-surface-elevated px-4 text-[16px] text-foreground outline-none transition-colors placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/20"
             />
             {error ? <p className="px-1 text-center typography-small text-[var(--status-error)]">{error}</p> : null}
-            <Button type="submit" size="lg" className="mt-1 h-12 w-full" disabled={isBusy || !password.trim()}>
-              {isBusy ? t('mobile.connect.connecting') : t('mobile.connect.unlockButton')}
+            <Button type="submit" size="lg" className="mt-1 h-12 w-full" disabled={isPasswordBusy || !password.trim()}>
+              {isPasswordBusy ? t('mobile.connect.connecting') : t('mobile.connect.unlockButton')}
             </Button>
             <Button
               type="button"
@@ -261,24 +347,27 @@ const MobileConnectionWelcome: React.FC<{ onConnected: () => void }> = ({ onConn
           <div className="flex w-full flex-col gap-3">
             <form className="flex w-full flex-col gap-3" onSubmit={handleSubmit}>
               <input
-                value={connectionName}
-                onChange={(event) => setConnectionName(event.target.value)}
-                placeholder={t('mobile.instances.label.placeholder')}
-                aria-label={t('mobile.instances.label.label')}
-                autoCapitalize="words"
-                autoCorrect="off"
-                className="h-12 w-full rounded-[16px] border border-border/70 bg-surface-elevated px-4 text-center text-[16px] text-foreground outline-none transition-colors placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/20"
-              />
-              <input
-                value={serverUrl}
-                onChange={(event) => handleUrlChange(event.target.value)}
-                placeholder={t('mobile.connect.url.placeholder')}
-                aria-label={t('mobile.connect.url.label')}
-                inputMode="url"
-                autoCapitalize="none"
-                autoCorrect="off"
-                className="h-12 w-full rounded-[16px] border border-border/70 bg-surface-elevated px-4 text-center text-[16px] text-foreground outline-none transition-colors placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/20"
-              />
+              value={connectionName}
+              onChange={(event) => setConnectionName(event.target.value)}
+              placeholder={t('mobile.instances.label.placeholder')}
+              aria-label={t('mobile.instances.label.label')}
+              autoComplete="off"
+              autoCapitalize="words"
+              autoCorrect="off"
+              spellCheck={false}
+              className="h-12 w-full rounded-[16px] border border-border/70 bg-surface-elevated px-4 text-center text-[16px] text-foreground outline-none transition-colors placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/20"
+            />
+            <input
+              {...mobileInputKeyboardProps}
+              value={serverUrl}
+              onChange={(event) => handleUrlChange(event.target.value)}
+              placeholder={t('mobile.connect.url.placeholder')}
+              aria-label={t('mobile.connect.url.label')}
+              type="url"
+              inputMode="url"
+              autoCapitalize="none"
+              className="h-12 w-full rounded-[16px] border border-border/70 bg-surface-elevated px-4 text-center text-[16px] text-foreground outline-none transition-colors placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/20"
+            />
 
               <div>
                 <button
@@ -299,12 +388,12 @@ const MobileConnectionWelcome: React.FC<{ onConnected: () => void }> = ({ onConn
                       <label className="block space-y-1.5">
                         <span className="block px-1 typography-ui-label text-foreground">{t('mobile.connect.token.label')}</span>
                         <input
+                          {...mobileInputKeyboardProps}
                           value={clientToken}
                           onChange={(event) => setClientToken(event.target.value)}
                           placeholder={t('mobile.connect.token.placeholder')}
                           tabIndex={advancedOpen ? undefined : -1}
                           autoCapitalize="none"
-                          autoCorrect="off"
                           className="h-12 w-full rounded-[16px] border border-border/70 bg-surface-elevated px-4 text-[16px] text-foreground outline-none transition-colors placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/20"
                         />
                       </label>
@@ -378,7 +467,7 @@ const MobileInstancesSurface: React.FC<{
   const { t } = useI18n();
   const conn = useMobileConnection(onConnect);
   const {
-    connections, isBusy, error, pendingConnection,
+    connections, isBusy, isPasswordBusy, error, pendingConnection,
     connect, submitPassword, cancelPassword, saveConnection, removeConnection, setError,
   } = conn;
   const [editingId, setEditingId] = React.useState<string | null>(null);
@@ -407,8 +496,9 @@ const MobileInstancesSurface: React.FC<{
 
   const saveInstance = React.useCallback((event: React.FormEvent) => {
     event.preventDefault();
-    const saved = saveConnection({ url, label, clientToken });
-    if (saved) setEditingId(null);
+    void saveConnection({ url, label, clientToken }).then((saved) => {
+      if (saved) setEditingId(null);
+    });
   }, [clientToken, label, saveConnection, url]);
 
   // Scan a pairing QR into the add/edit form fields (does not change edit mode, so
@@ -465,10 +555,11 @@ const MobileInstancesSurface: React.FC<{
   const confirmDelete = React.useCallback((id: string) => {
     setConfirmingDeleteId(null);
     if (editingId === id) setEditingId(null);
-    const removed = removeConnection(id);
-    if (removed && isSameConnectionUrl(removed.url, getRuntimeApiBaseUrl())) {
-      onActiveConnectionDeleted();
-    }
+    void removeConnection(id).then((removed) => {
+      if (removed && isSameConnectionUrl(removed.url, getRuntimeApiBaseUrl())) {
+        onActiveConnectionDeleted();
+      }
+    });
   }, [editingId, onActiveConnectionDeleted, removeConnection]);
 
   const inputClass = 'h-12 w-full rounded-[16px] border border-border/70 bg-surface-elevated px-4 text-[16px] text-foreground outline-none transition-colors placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/20';
@@ -488,6 +579,7 @@ const MobileInstancesSurface: React.FC<{
               </div>
             </div>
             <input
+              {...mobileInputKeyboardProps}
               value={password}
               onChange={(event) => setPassword(event.target.value)}
               placeholder={t('mobile.connect.password.placeholder')}
@@ -497,8 +589,8 @@ const MobileInstancesSurface: React.FC<{
               className={inputClass}
             />
             {error ? <p className="px-1 typography-small text-[var(--status-error)]">{error}</p> : null}
-            <Button type="submit" size="lg" className="mt-1 h-12 w-full" disabled={isBusy || !password.trim()}>
-              {isBusy ? t('mobile.connect.connecting') : t('mobile.connect.unlockButton')}
+            <Button type="submit" size="lg" className="mt-1 h-12 w-full" disabled={isPasswordBusy || !password.trim()}>
+              {isPasswordBusy ? t('mobile.connect.connecting') : t('mobile.connect.unlockButton')}
             </Button>
             <Button type="button" variant="ghost" size="sm" className="w-full" onClick={cancelPasswordPrompt}>
               {t('mobile.connect.cancelPassword')}
@@ -617,31 +709,34 @@ const MobileInstancesSurface: React.FC<{
                 value={label}
                 onChange={(event) => setLabel(event.target.value)}
                 placeholder={t('mobile.instances.label.placeholder')}
+                autoComplete="off"
                 autoCapitalize="words"
                 autoCorrect="off"
+                spellCheck={false}
                 className={inputClass}
               />
             </label>
             <label className="block space-y-1.5">
               <span className="block px-1 typography-ui-label text-foreground">{t('mobile.connect.url.label')}</span>
               <input
+                {...mobileInputKeyboardProps}
                 value={url}
                 onChange={(event) => setUrl(event.target.value)}
                 placeholder={t('mobile.connect.url.placeholder')}
+                type="url"
                 inputMode="url"
                 autoCapitalize="none"
-                autoCorrect="off"
                 className={inputClass}
               />
             </label>
             <label className="block space-y-1.5">
               <span className="block px-1 typography-ui-label text-foreground">{t('mobile.connect.token.label')}</span>
               <input
+                {...mobileInputKeyboardProps}
                 value={clientToken}
                 onChange={(event) => setClientToken(event.target.value)}
                 placeholder={t('mobile.connect.token.placeholder')}
                 autoCapitalize="none"
-                autoCorrect="off"
                 className={inputClass}
               />
               <p className="px-1 typography-micro text-muted-foreground">{t('mobile.connect.token.hint')}</p>
@@ -1369,6 +1464,44 @@ const MobileShell: React.FC<{ onActiveConnectionDeleted: () => void }> = ({ onAc
     setPendingChangesDiff(null);
   }, []);
 
+  const handleNativeBack = React.useCallback(() => {
+    if (overflowOpen) {
+      setOverflowOpen(false);
+      return true;
+    }
+    if (sessionsSheetOpen) {
+      setSessionsSheetOpen(false);
+      return true;
+    }
+    if (filesOpen) {
+      setFilesOpen(false);
+      return true;
+    }
+    if (changesOpen) {
+      closeChanges();
+      return true;
+    }
+    if (mcpOpen) {
+      setMcpOpen(false);
+      return true;
+    }
+    if (instancesOpen) {
+      setInstancesOpen(false);
+      return true;
+    }
+    if (settingsOpen) {
+      setSettingsOpen(false);
+      return true;
+    }
+    if (updateOpen) {
+      setUpdateOpen(false);
+      return true;
+    }
+    return false;
+  }, [changesOpen, closeChanges, filesOpen, instancesOpen, mcpOpen, overflowOpen, sessionsSheetOpen, settingsOpen, updateOpen]);
+
+  useNativeAndroidBackButton(handleNativeBack);
+
   const showUpdateItem = updateAvailable && (updateRuntimeType === 'desktop' || updateRuntimeType === 'web');
 
   const openMcpCreateSettings = React.useCallback(() => {
@@ -1658,6 +1791,17 @@ export function MobileApp({ apis }: MobileAppProps) {
   const [runtimeEndpointEpoch, setRuntimeEndpointEpoch] = React.useState(0);
   const [showConnectionRecovery, setShowConnectionRecovery] = React.useState(false);
   const isNativeMobileApp = React.useMemo(() => isCapacitorMobileApp(), []);
+
+  const handleNativeResume = React.useCallback(() => {
+    if (!getRuntimeApiBaseUrl()) return;
+    void initializeApp();
+    void refreshGitHubAuthStatus(apis.github, { force: true });
+    if (providersCount === 0) void loadProviders({ source: 'mobileApp:nativeResume' });
+    if (agentsCount === 0) void loadAgents({ source: 'mobileApp:nativeResume' });
+  }, [agentsCount, apis.github, initializeApp, loadAgents, loadProviders, providersCount, refreshGitHubAuthStatus]);
+
+  useNativeMobileChrome();
+  useNativeMobileLifecycle(handleNativeResume);
 
   React.useEffect(() => {
     registerRuntimeAPIs(apis);

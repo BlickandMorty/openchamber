@@ -23,7 +23,11 @@
     "lint": "eslint \"./**/*.{ts,tsx,js,mjs}\" --config ../../eslint.config.js --ignore-pattern dist --ignore-pattern ios --ignore-pattern android"
   },
   "dependencies": {
-    "@capacitor/core": "^8.4.1"
+    "@aparajita/capacitor-secure-storage": "^8.0.0",
+    "@capacitor/app": "^8.0.0",
+    "@capacitor/core": "^8.4.1",
+    "@capacitor/keyboard": "^8.0.0",
+    "@capacitor/status-bar": "^8.0.0"
   },
   "devDependencies": {
     "@capacitor/android": "^8.4.1",
