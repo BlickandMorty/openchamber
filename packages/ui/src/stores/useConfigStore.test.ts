@@ -408,6 +408,39 @@ describe('useConfigStore provider persistence', () => {
     expect(getConfigCalls).toBe(0);
   });
 
+  test('BUG: provider reload silently overwrites __add_provider__ sentinel with first existing provider ID', async () => {
+    useConfigStore.setState({
+      activeDirectoryKey: DIRECTORY,
+      currentProviderId: 'provider-a',
+      currentModelId: 'provider-a-model',
+      selectedProviderId: '__add_provider__',
+      providers: [provider('provider-b')],
+      defaultProviders: {},
+      directoryScoped: {
+        [DIRECTORY]: {
+          providers: [provider('provider-b')],
+          agents: [],
+          currentProviderId: 'provider-b',
+          currentModelId: 'provider-b-model',
+          currentAgentName: undefined,
+          selectedProviderId: '__add_provider__',
+          agentModelSelections: {},
+          defaultProviders: {},
+        },
+      },
+    });
+
+    // The user is in "add provider" mode. A background provider refresh happens.
+    liveProviderId = 'provider-b';
+    await useConfigStore.getState().loadProviders({ source: 'test:addProviderPreserve' });
+
+    const state = useConfigStore.getState();
+    // BUG: selectedProviderId should remain '__add_provider__' since the user
+    // is still in the add-provider form. Instead it is silently overwritten
+    // to 'provider-b', which causes the UI to navigate away from the form.
+    expect(state.selectedProviderId).toBe('__add_provider__');
+  });
+
   test('manual selection survives an in-flight loadAgents refresh', async () => {
     const pendingAgents = deferred<TestAgent[]>();
     listAgentsImpl = async () => pendingAgents.promise;
