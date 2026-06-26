@@ -14,7 +14,7 @@ const FLAG_KEY = "openchamber:sync:debug"
 
 let _enabled: boolean | undefined
 
-export function isSyncDebugEnabled(): boolean {
+function isSyncDebugEnabled(): boolean {
   if (_enabled !== undefined) return _enabled
   try {
     _enabled = typeof localStorage !== "undefined" && localStorage.getItem(FLAG_KEY) === "1"

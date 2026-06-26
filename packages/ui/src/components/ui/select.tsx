@@ -272,7 +272,7 @@ function SelectSeparator({
   )
 }
 
-function SelectScrollUpButton({
+export function SelectScrollUpButton({
   className,
   ...props
 }: React.ComponentProps<typeof BaseSelect.ScrollUpArrow>) {
@@ -290,7 +290,7 @@ function SelectScrollUpButton({
   )
 }
 
-function SelectScrollDownButton({
+export function SelectScrollDownButton({
   className,
   ...props
 }: React.ComponentProps<typeof BaseSelect.ScrollDownArrow>) {
@@ -314,8 +314,6 @@ export {
   SelectGroup,
   SelectItem,
   SelectLabel,
-  SelectScrollDownButton,
-  SelectScrollUpButton,
   SelectSeparator,
   SelectTrigger,
   SelectValue,

@@ -18,7 +18,7 @@ const readStoredShowGitignored = (): boolean => {
   }
 };
 
-export const notifyFilesViewShowGitignoredChanged = () => {
+const notifyFilesViewShowGitignoredChanged = () => {
   if (typeof window === 'undefined') {
     return;
   }

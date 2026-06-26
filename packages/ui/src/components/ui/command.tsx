@@ -38,7 +38,7 @@ function Command({
   )
 }
 
-function CommandDialog({
+export function CommandDialog({
   title = "Command Palette",
   description = "Search for a command to run...",
   children,
@@ -232,7 +232,6 @@ function CommandShortcut({
 
 export {
   Command,
-  CommandDialog,
   CommandInput,
   CommandList,
   CommandEmpty,

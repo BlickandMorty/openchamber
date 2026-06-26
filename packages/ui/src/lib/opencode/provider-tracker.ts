@@ -90,7 +90,7 @@ function isCircuitBreakerStatus(status?: number): boolean {
   return status !== undefined && RETRYABLE_STATUS_CODES.has(status)
 }
 
-export function isCircuitOpen(providerID: string): boolean {
+function isCircuitOpen(providerID: string): boolean {
   const state = providers.get(providerID)
   if (!state?.circuitOpen) return false
 

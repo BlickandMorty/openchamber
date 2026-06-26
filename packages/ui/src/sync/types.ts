@@ -77,7 +77,7 @@ export type GlobalState = {
   sessionTodo: Record<string, Todo[]>
 }
 
-export type InitError = {
+type InitError = {
   type: "init"
   message: string
 }

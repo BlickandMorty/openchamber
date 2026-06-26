@@ -24,18 +24,6 @@ export const startDesktopWindowDrag = async (): Promise<void> => {
   }
 };
 
-export const isDesktopWindowFullscreen = async (): Promise<boolean> => {
-  if (!isDesktopShell()) {
-    return false;
-  }
-
-  try {
-    return Boolean(await invokeDesktopCommand('desktop_is_window_fullscreen'));
-  } catch {
-    return false;
-  }
-};
-
 export const setDesktopWindowTitle = async (title: string): Promise<void> => {
   if (!isDesktopShell()) {
     return;
@@ -75,10 +63,3 @@ export const getDesktopAppVersion = async (): Promise<string | null> => {
     return null;
   }
 };
-
-export const readDesktopFile = async (
-  path: string,
-): Promise<{ mime: string; base64: string; size?: number }> => {
-  return invokeDesktopCommand('desktop_read_file', { path });
-};
-

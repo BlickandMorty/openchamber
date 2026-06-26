@@ -74,7 +74,3 @@ export function removeContentBytes(path: string) {
 export function touchContent(path: string, bytes?: number) {
   touch(path, bytes)
 }
-
-export function hasContent(path: string): boolean {
-  return lru.has(path)
-}

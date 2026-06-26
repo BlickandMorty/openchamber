@@ -120,7 +120,7 @@ async function buildGitEnv(): Promise<NodeJS.ProcessEnv> {
 /**
  * Initialize the git extension API
  */
-export async function initGitExtension(): Promise<GitAPI | null> {
+async function initGitExtension(): Promise<GitAPI | null> {
   if (gitApi && gitExtensionEnabled) {
     return gitApi;
   }
@@ -163,7 +163,7 @@ export async function initGitExtension(): Promise<GitAPI | null> {
 /**
  * Get the git API, initializing if necessary
  */
-export async function getGitApi(): Promise<GitAPI | null> {
+async function getGitApi(): Promise<GitAPI | null> {
   if (gitApi && gitExtensionEnabled) {
     return gitApi;
   }
@@ -173,7 +173,7 @@ export async function getGitApi(): Promise<GitAPI | null> {
 /**
  * Get repository for a given directory
  */
-export async function getRepository(directory: string): Promise<Repository | null> {
+async function getRepository(directory: string): Promise<Repository | null> {
   const api = await getGitApi();
   if (!api) return null;
 
@@ -333,20 +333,20 @@ export async function isLinkedWorktree(directory: string): Promise<boolean> {
 
 // ============== Status Operations ==============
 
-export interface GitStatusFile {
+interface GitStatusFile {
   path: string;
   index: string;
   working_dir: string;
 }
 
-export interface GitMergeInProgress {
+interface GitMergeInProgress {
   /** Short SHA of MERGE_HEAD */
   head: string;
   /** First line of MERGE_MSG */
   message: string;
 }
 
-export interface GitRebaseInProgress {
+interface GitRebaseInProgress {
   /** Branch name being rebased */
   headName: string;
   /** Short SHA of the onto commit */
@@ -591,7 +591,7 @@ async function getGitStatusRaw(directory: string): Promise<GitStatusResult> {
 
 // ============== Branch Operations ==============
 
-export interface GitBranchDetails {
+interface GitBranchDetails {
   current: boolean;
   name: string;
   commit: string;
@@ -720,25 +720,6 @@ export async function checkoutBranch(directory: string, branch: string): Promise
 }
 
 /**
- * Get the current HEAD branch name (null if detached)
- */
-export async function getCurrentBranch(directory: string): Promise<string | null> {
-  const repo = await getRepository(directory);
-  
-  if (repo) {
-    const head = repo.state.HEAD;
-    return head?.name || null;
-  }
-
-  // Fallback to raw git
-  const result = await execGit(['symbolic-ref', '--short', 'HEAD'], directory);
-  if (result.exitCode === 0) {
-    return result.stdout.trim();
-  }
-  return null; // Detached HEAD
-}
-
-/**
  * Create a new branch
  */
 export async function createBranch(directory: string, name: string, startPoint?: string): Promise<{ success: boolean; branch: string }> {
@@ -807,7 +788,7 @@ type WorktreeListEntry = {
   branch?: string;
 };
 
-export interface GitWorktreeValidationError {
+interface GitWorktreeValidationError {
   code: string;
   message: string;
 }
@@ -2225,10 +2206,6 @@ export async function revertGitFile(
   }
 }
 
-export async function stageGitFile(directory: string, filePath: string): Promise<void> {
-  await stageGitFiles(directory, [filePath]);
-}
-
 export async function stageGitFiles(directory: string, filePaths: string[]): Promise<void> {
   const paths = filePaths.map((path) => path.trim()).filter(Boolean);
 
@@ -2262,10 +2239,6 @@ export async function stageGitFiles(directory: string, filePaths: string[]): Pro
       throw new Error(perPath.stderr || 'Failed to stage git file');
     }
   }
-}
-
-export async function unstageGitFile(directory: string, filePath: string): Promise<void> {
-  await unstageGitFiles(directory, [filePath]);
 }
 
 export async function unstageGitFiles(directory: string, filePaths: string[]): Promise<void> {
@@ -3590,38 +3563,6 @@ export async function resetToCommit(
     throw new Error(result.stderr || 'Reset failed');
   }
   return { success: true };
-}
-
-// ============== Stash Operations ==============
-
-/**
- * Stash changes
- */
-export async function stash(
-  directory: string,
-  options?: { message?: string; includeUntracked?: boolean }
-): Promise<{ success: boolean }> {
-  const args = ['stash', 'push'];
-
-  // Include untracked files by default
-  if (options?.includeUntracked !== false) {
-    args.push('--include-untracked');
-  }
-
-  if (options?.message) {
-    args.push('-m', options.message);
-  }
-
-  const result = await execGit(args, directory);
-  return { success: result.exitCode === 0 };
-}
-
-/**
- * Pop the most recent stash
- */
-export async function stashPop(directory: string): Promise<{ success: boolean }> {
-  const result = await execGit(['stash', 'pop'], directory);
-  return { success: result.exitCode === 0 };
 }
 
 // ============== Worktree Validation & Canonicalization ==============

@@ -18,7 +18,7 @@ const TOOL_ROW_DESCRIPTION_CLASS = cn('typography-meta', TOOL_ROW_TEXT_CLASS);
 
 type PartWithText = Part & { text?: string; content?: string; time?: { start?: number; end?: number } };
 
-export type ReasoningVariant = 'thinking' | 'justification';
+type ReasoningVariant = 'thinking' | 'justification';
 
 const cleanReasoningText = (text: string): string => {
     if (typeof text !== 'string' || text.trim().length === 0) {

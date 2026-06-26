@@ -5,10 +5,3 @@
 
 export type VoiceStatus = "disconnected" | "connecting" | "connected" | "error"
 export type VoiceMode = "idle" | "speaking" | "listening"
-
-export type VoiceState = {
-  voiceStatus: VoiceStatus
-  voiceMode: VoiceMode
-  setVoiceStatus: (status: VoiceStatus) => void
-  setVoiceMode: (mode: VoiceMode) => void
-}

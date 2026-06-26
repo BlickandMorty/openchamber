@@ -213,7 +213,7 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
 
 Textarea.displayName = "Textarea"
 
-function TextareaCharCounter({
+export function TextareaCharCounter({
   current,
   max,
   className,
@@ -238,4 +238,4 @@ function TextareaCharCounter({
   );
 }
 
-export { Textarea, TextareaCharCounter }
+export { Textarea }

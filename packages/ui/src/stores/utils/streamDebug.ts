@@ -22,7 +22,7 @@ type StreamPerfState = {
     lastUpdatedAt: number;
 };
 
-export type StreamPerfEntry = {
+type StreamPerfEntry = {
     metric: string;
     count: number;
     avg: number;
@@ -52,7 +52,7 @@ declare global {
     }
 }
 
-export const streamPerfEnabled = (): boolean => {
+const streamPerfEnabled = (): boolean => {
     if (typeof window === 'undefined') return false;
     try {
         return window.localStorage.getItem(STREAM_PERF_STORAGE_KEY) === '1';

@@ -2042,17 +2042,6 @@ export function useDirectorySync<T>(selector: (state: State) => T, directory?: s
   return useStore(store, selector)
 }
 
-/** Get the revert messageID for a session (if reverted) */
-export function useSessionRevertMessageID(sessionID: string, directory?: string): string | undefined {
-  return useDirectorySync(
-    useCallback((state: State) => {
-      const session = state.session.find((s) => s.id === sessionID)
-      return (session as { revert?: { messageID?: string } } | undefined)?.revert?.messageID
-    }, [sessionID]),
-    directory,
-  )
-}
-
 /** Get session messages for a specific session */
 export function useSessionMessages(sessionID: string, directory?: string) {
   const store = useDirectoryStore(directory)

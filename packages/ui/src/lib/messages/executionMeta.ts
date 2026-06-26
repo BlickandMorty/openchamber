@@ -1,9 +1,3 @@
-export const EXECUTION_FORK_META_TEXT =
-    "This message comes from an AI assistant in another session. The user wants you to respond according to its content: " +
-    "if it is an implementation plan, your task is to implement that plan; " +
-    "if it is a conclusion or summary, your task is to verify it, explain whether you agree or disagree, and correct it if needed. " +
-    "Always clearly state what you understand your task to be, and wait for the user's approval of your conclusions before taking any further actions.";
-
 export const MULTIRUN_EXECUTION_FORK_PROMPT_META_TEXT =
     "This message bellow comes from an AI agent in another session. I want you to act according to its content: " +
     "if it is an implementation plan, your task is to implement that plan; " +
@@ -23,7 +17,7 @@ export const EXECUTION_FORK_DEFAULT_INSTRUCTIONS =
 
 // Fixed connective that opens the forked assistant content. Not editable by the
 // user — it sits between the user's instructions and the assistant message.
-export const EXECUTION_FORK_CONTENT_PREFACE =
+const EXECUTION_FORK_CONTENT_PREFACE =
     "This message below comes from an AI agent in another session. Here is the content of the message:";
 
 // Builds the final message sent to the new session:

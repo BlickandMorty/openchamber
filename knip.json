@@ -1,9 +1,119 @@
 {
   "$schema": "https://unpkg.com/knip@latest/schema.json",
-  "ignore": [
-    "**/*.test.{js,cjs,mjs,jsx,ts,tsx}",
-    "**/__tests__/**"
-  ],
+  "ignoreIssues": {
+    "packages/ui/src/lib/router/types.ts": [
+      "types"
+    ],
+    "packages/ui/src/lib/api/types.ts": [
+      "types"
+    ],
+    "packages/ui/src/lib/opencode/client.ts": [
+      "types"
+    ],
+    "packages/ui/src/lib/runtime-auth.ts": [
+      "exports",
+      "types"
+    ],
+    "packages/ui/src/lib/theme/themes/index.ts": [
+      "exports"
+    ],
+    "packages/ui/src/lib/theme/vscode/adapter.ts": [
+      "types"
+    ],
+    "packages/ui/src/types/**/*.ts": [
+      "types"
+    ],
+    "packages/ui/src/components/diagram/index.ts": [
+      "types"
+    ],
+    "packages/web/bin/cli-output.js": [
+      "exports"
+    ],
+    "packages/web/server/lib/event-stream/index.js": [
+      "exports"
+    ],
+    "packages/web/server/lib/event-stream/global-hub.js": [
+      "exports"
+    ],
+    "packages/web/server/lib/notifications/index.js": [
+      "exports"
+    ],
+    "packages/web/server/lib/opencode/agents.js": [
+      "exports"
+    ],
+    "packages/web/server/lib/opencode/commands.js": [
+      "exports"
+    ],
+    "packages/web/server/lib/opencode/index.js": [
+      "exports"
+    ],
+    "packages/web/server/lib/opencode/shared.js": [
+      "exports"
+    ],
+    "packages/web/server/lib/opencode/skills.js": [
+      "exports"
+    ],
+    "packages/web/server/lib/projects/project-config.js": [
+      "exports"
+    ],
+    "packages/web/server/lib/quota/providers/google/index.js": [
+      "exports"
+    ],
+    "packages/web/server/lib/quota/providers/google/auth.js": [
+      "exports"
+    ],
+    "packages/web/server/lib/quota/providers/google/transforms.js": [
+      "exports"
+    ],
+    "packages/web/server/lib/skills-catalog/index.js": [
+      "exports"
+    ],
+    "packages/web/server/lib/skills-catalog/cache.js": [
+      "exports"
+    ],
+    "packages/web/server/lib/skills-catalog/curated-sources.js": [
+      "exports"
+    ],
+    "packages/web/server/lib/skills-catalog/clawdhub/index.js": [
+      "exports"
+    ],
+    "packages/web/server/lib/skills-catalog/clawdhub/api.js": [
+      "exports"
+    ],
+    "packages/web/server/lib/skills-catalog/clawdhub/scan.js": [
+      "exports"
+    ],
+    "packages/web/server/lib/terminal/index.js": [
+      "exports"
+    ],
+    "packages/ui/src/components/ui/card.tsx": [
+      "exports"
+    ],
+    "packages/ui/src/components/ui/command.tsx": [
+      "exports"
+    ],
+    "packages/ui/src/components/ui/context-menu.tsx": [
+      "exports"
+    ],
+    "packages/ui/src/components/ui/dialog.tsx": [
+      "exports"
+    ],
+    "packages/ui/src/components/ui/dropdown-menu.tsx": [
+      "exports"
+    ],
+    "packages/ui/src/components/ui/select.tsx": [
+      "exports"
+    ],
+    "packages/ui/src/components/ui/textarea.tsx": [
+      "exports"
+    ],
+    "packages/ui/src/sync/event-pipeline.ts": [
+      "types"
+    ],
+    "packages/vscode/webview/api/bridge.ts": [
+      "exports"
+    ]
+  },
   "workspaces": {
     ".": {
       "entry": [
@@ -15,6 +125,10 @@
       ]
     },
     "packages/ui": {
+      "entry": [
+        "src/**/*.{test,spec}.{js,cjs,mjs,jsx,ts,tsx}",
+        "src/**/__tests__/**/*.{js,cjs,mjs,jsx,ts,tsx}"
+      ],
       "project": [
         "src/**/*.{ts,tsx}"
       ]
@@ -23,7 +137,9 @@
       "entry": [
         "src/mobile-main.tsx",
         "src/mini-chat-main.tsx",
-        "src/sw.ts"
+        "src/sw.ts",
+        "server/**/*.{test,spec}.{js,cjs,mjs}",
+        "src/**/*.{test,spec}.{ts,tsx}"
       ],
       "project": [
         "bin/**/*.js",
@@ -38,6 +154,7 @@
         "tray.mjs",
         "ssh-manager.mjs",
         "opencode-cwd.mjs",
+        "*.{test,spec}.{js,cjs,mjs}",
         "scripts/**/*.{js,cjs,mjs}"
       ],
       "project": [
@@ -46,6 +163,10 @@
       ]
     },
     "packages/vscode": {
+      "entry": [
+        "src/**/*.{test,spec}.{js,cjs,mjs,ts,tsx}",
+        "webview/**/*.{test,spec}.{js,cjs,mjs,ts,tsx}"
+      ],
       "project": [
         "src/**/*.{ts,tsx}",
         "webview/**/*.{ts,tsx}"

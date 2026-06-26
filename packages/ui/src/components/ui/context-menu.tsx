@@ -53,11 +53,11 @@ function ContextMenuSeparator({ className, ...props }: React.ComponentProps<type
   return <BaseContextMenu.Separator className={cn(dropdownMenuSeparatorClass, className)} {...props} />;
 }
 
-function ContextMenuSub({ ...props }: React.ComponentProps<typeof BaseContextMenu.SubmenuRoot>) {
+export function ContextMenuSub({ ...props }: React.ComponentProps<typeof BaseContextMenu.SubmenuRoot>) {
   return <BaseContextMenu.SubmenuRoot {...props} />;
 }
 
-function ContextMenuSubTrigger({ className, children, ...props }: React.ComponentProps<typeof BaseContextMenu.SubmenuTrigger>) {
+export function ContextMenuSubTrigger({ className, children, ...props }: React.ComponentProps<typeof BaseContextMenu.SubmenuTrigger>) {
   return (
     <BaseContextMenu.SubmenuTrigger className={cn(dropdownMenuSubTriggerClass, className)} {...props}>
       {children}
@@ -66,7 +66,7 @@ function ContextMenuSubTrigger({ className, children, ...props }: React.Componen
   );
 }
 
-function ContextMenuSubContent({ className, positionerClassName, children, style, ...props }: ContentProps) {
+export function ContextMenuSubContent({ className, positionerClassName, children, style, ...props }: ContentProps) {
   return (
     <BaseContextMenu.Portal>
       <BaseContextMenu.Positioner className={cn("app-region-no-drag z-50", positionerClassName)}>
@@ -93,7 +93,4 @@ export {
   ContextMenuContent,
   ContextMenuItem,
   ContextMenuSeparator,
-  ContextMenuSub,
-  ContextMenuSubTrigger,
-  ContextMenuSubContent,
 };

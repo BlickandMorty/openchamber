@@ -20,7 +20,7 @@ const readStoredShowHidden = (): boolean => {
   }
 };
 
-export const notifyDirectoryShowHiddenChanged = () => {
+const notifyDirectoryShowHiddenChanged = () => {
   if (typeof window === 'undefined') {
     return;
   }

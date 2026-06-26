@@ -2,7 +2,7 @@ import type { Part } from '@opencode-ai/sdk/v2';
 
 type PartWithText = Part & { text?: string; content?: string; value?: string };
 
-export const isValidPart = (part: unknown): part is Part => {
+const isValidPart = (part: unknown): part is Part => {
     return Boolean(part && typeof part === 'object' && typeof (part as { type?: unknown }).type === 'string');
 };
 

@@ -10,9 +10,9 @@ import { create } from "zustand"
 import type { Message, SessionStatus } from "@opencode-ai/sdk/v2/client"
 import type { State } from "./types"
 
-export type StreamPhase = "streaming" | "cooldown" | "completed"
+type StreamPhase = "streaming" | "cooldown" | "completed"
 
-export type MessageStreamState = {
+type MessageStreamState = {
   phase: StreamPhase
   startedAt: number
   lastUpdateAt: number

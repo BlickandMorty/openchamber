@@ -1,14 +1,14 @@
 import type { WorktreeMetadata } from '@/types/worktree';
 import type { SessionWorktreeAttachment } from '@/stores/types/sessionTypes';
 
-export type ResolveSessionWorktreeStateInput = {
+type ResolveSessionWorktreeStateInput = {
   sessionDirectory: string | null;
   metadata: WorktreeMetadata | null;
   cwdExists?: boolean;
   runtimeResolution?: SessionWorktreeAttachment | null;
 };
 
-export type WorktreeCanonicalizationResult = {
+type WorktreeCanonicalizationResult = {
   worktreeRoot: string | null;
   cwd: string | null;
   branch: string | null;
@@ -19,7 +19,7 @@ export type WorktreeCanonicalizationResult = {
   attentionReason?: 'merge' | 'rebase' | 'cherry-pick' | 'revert' | 'bisect' | null;
 };
 
-export type SessionWorktreeCanonicalizationOptions = {
+type SessionWorktreeCanonicalizationOptions = {
   existingAttachment?: SessionWorktreeAttachment | null;
   fallbackDirectory?: string | null;
   worktreeSource?: SessionWorktreeAttachment['worktreeSource'];
@@ -32,7 +32,7 @@ const normalizePath = (value: string): string => {
   return replaced.replace(/\/+$/, '') || replaced;
 };
 
-export function isWithinWorktreeRoot(candidate: string | null, worktreeRoot: string | null): boolean {
+function isWithinWorktreeRoot(candidate: string | null, worktreeRoot: string | null): boolean {
   if (!candidate || !worktreeRoot) return false;
   const c = normalizePath(candidate);
   const r = normalizePath(worktreeRoot);

@@ -41,7 +41,7 @@ function DialogPortal({
   return <BaseDialog.Portal {...props} />
 }
 
-function DialogClose({
+export function DialogClose({
   asChild,
   children,
   ...props
@@ -177,13 +177,10 @@ function DialogDescription({
 
 export {
   Dialog,
-  DialogClose,
   DialogContent,
   DialogDescription,
   DialogFooter,
   DialogHeader,
-  DialogOverlay,
-  DialogPortal,
   DialogTitle,
   DialogTrigger,
 }

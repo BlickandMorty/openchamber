@@ -1,5 +1,3 @@
-export type QuestionAnswer = string[];
-
 export interface QuestionOption {
   label: string;
   description: string;
@@ -21,4 +19,3 @@ export interface QuestionRequest {
     callID: string;
   };
 }
-

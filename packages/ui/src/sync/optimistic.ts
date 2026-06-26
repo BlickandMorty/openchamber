@@ -7,25 +7,9 @@ function sortParts(parts: Part[]) {
   return parts.filter((part) => !!part?.id).sort((a, b) => cmp(a.id, b.id))
 }
 
-export type OptimisticStore = {
-  message: Record<string, Message[] | undefined>
-  part: Record<string, Part[] | undefined>
-}
-
 export type OptimisticItem = {
   message: Message
   parts: Part[]
-}
-
-export type OptimisticAddInput = {
-  sessionID: string
-  message: Message
-  parts: Part[]
-}
-
-export type OptimisticRemoveInput = {
-  sessionID: string
-  messageID: string
 }
 
 export type MessagePage = {

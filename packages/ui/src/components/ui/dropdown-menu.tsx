@@ -48,7 +48,7 @@ function DropdownMenu({
   )
 }
 
-function DropdownMenuPortal({
+export function DropdownMenuPortal({
   ...props
 }: React.ComponentProps<typeof BaseMenu.Portal>) {
   const portalContext = React.useContext(DropdownPortalContext);
@@ -147,7 +147,7 @@ function DropdownMenuContent({
   )
 }
 
-function DropdownMenuGroup({
+export function DropdownMenuGroup({
   ...props
 }: React.ComponentProps<typeof BaseMenu.Group>) {
   return <BaseMenu.Group data-slot="dropdown-menu-group" {...props} />
@@ -188,7 +188,7 @@ function DropdownMenuItem({
   )
 }
 
-function DropdownMenuCheckboxItem({
+export function DropdownMenuCheckboxItem({
   className,
   children,
   checked,
@@ -277,7 +277,7 @@ function DropdownMenuSeparator({
   )
 }
 
-function DropdownMenuShortcut({
+export function DropdownMenuShortcut({
   className,
   ...props
 }: React.ComponentProps<"span">) {
@@ -353,17 +353,13 @@ function DropdownMenuSubContent({
 
 export {
   DropdownMenu,
-  DropdownMenuPortal,
   DropdownMenuTrigger,
   DropdownMenuContent,
-  DropdownMenuGroup,
   DropdownMenuLabel,
   DropdownMenuItem,
-  DropdownMenuCheckboxItem,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
   DropdownMenuSeparator,
-  DropdownMenuShortcut,
   DropdownMenuSub,
   DropdownMenuSubTrigger,
   DropdownMenuSubContent,

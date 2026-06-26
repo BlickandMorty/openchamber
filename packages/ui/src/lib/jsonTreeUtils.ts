@@ -3,7 +3,7 @@
  * Provides parsing, tree building, flattening, and path utilities.
  */
 
-export type JsonTreeNodeType = 'object' | 'array' | 'string' | 'number' | 'boolean' | 'null';
+type JsonTreeNodeType = 'object' | 'array' | 'string' | 'number' | 'boolean' | 'null';
 
 export interface JsonTreeNode {
   id: string;
@@ -44,7 +44,7 @@ function getType(value: unknown): JsonTreeNodeType {
   return 'null';
 }
 
-export function getNodePath(pathSegments: string[]): string {
+function getNodePath(pathSegments: string[]): string {
   if (pathSegments.length === 0) return 'root';
   let result = 'root';
   for (const segment of pathSegments) {

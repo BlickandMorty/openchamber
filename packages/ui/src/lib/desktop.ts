@@ -5,7 +5,7 @@ import type { MobileKeyboardMode } from '@/lib/mobileKeyboardMode';
 import { getRuntimeApiBaseUrl, getRuntimeKey } from '@/lib/runtime-switch';
 import { getRegisteredRuntimeAPIs } from '@/contexts/runtimeAPIRegistry';
 
-export type ManagedRemoteTunnelPreset = {
+type ManagedRemoteTunnelPreset = {
   id: string;
   name: string;
   hostname: string;
