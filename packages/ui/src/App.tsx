@@ -35,7 +35,9 @@ import { useDirectoryStore } from '@/stores/useDirectoryStore';
 import { useProjectsStore } from '@/stores/useProjectsStore';
 import { opencodeClient } from '@/lib/opencode/client';
 import { runtimeFetch } from '@/lib/runtime-fetch';
-import { subscribeRuntimeEndpointChanged } from '@/lib/runtime-switch';
+import { getRuntimeKey, subscribeRuntimeEndpointChanged } from '@/lib/runtime-switch';
+import { useAutoReviewStore } from '@/stores/useAutoReviewStore';
+import { resumeAutoReviewRun } from '@/lib/reviewFlow';
 import { SyncProvider } from '@/sync/sync-context';
 import { useSync } from '@/sync/use-sync';
 import { ConfigUpdateOverlay } from '@/components/ui/ConfigUpdateOverlay';
@@ -271,6 +273,28 @@ function App({ apis }: AppProps) {
       setInitRetryEpoch((epoch) => epoch + 1);
     });
   }, []);
+
+  const autoReviewResumeSignature = useAutoReviewStore((state) => {
+    const runtimeKey = getRuntimeKey();
+    return Object.values(state.runsByOriginalSessionID)
+      .filter((run) => run.status === 'running' && run.runtimeKey === runtimeKey)
+      .map((run) => `${run.originalSessionID}:${run.phase}:${run.lastForwardedMessageID ?? ''}:${run.expectedAssistantParentID ?? ''}`)
+      .sort()
+      .join('|');
+  });
+
+  React.useEffect(() => {
+    if (embeddedSessionChat) {
+      return;
+    }
+
+    const runtimeKey = getRuntimeKey();
+    const runs = Object.values(useAutoReviewStore.getState().runsByOriginalSessionID)
+      .filter((run) => run.status === 'running' && run.runtimeKey === runtimeKey);
+    for (const run of runs) {
+      resumeAutoReviewRun(run.originalSessionID);
+    }
+  }, [autoReviewResumeSignature, embeddedSessionChat, runtimeEndpointEpoch]);
 
   React.useEffect(() => {
     document.documentElement.classList.toggle('wide-chat-layout', wideChatLayoutEnabled);
