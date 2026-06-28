@@ -25,9 +25,21 @@ import {
   showStartupHelp,
   showConnectUrlHelp,
   showTunnelHelp,
+  showResourceHelp,
   generateCompletionScript,
   findClosestMatch,
 } from './lib/cli-args.js';
+import { sessionCommand } from './lib/commands-session.js';
+import {
+  agentCommand,
+  commandResourceCommand,
+  skillCommand,
+  mcpCommand,
+  snippetCommand,
+  providerCommand,
+  projectCommand,
+  configCommand,
+} from './lib/commands-resources.js';
 import { readDesktopLocalPortFromSettings } from './lib/cli-paths.js';
 import { resolveExplicitBinary, searchPathFor } from './lib/cli-executables.js';
 import { startupCommand } from './lib/commands-startup.js';
@@ -217,9 +229,24 @@ commands.update = createUpdateCommand({
   serveCommand: commands.serve.bind(commands),
 });
 
+// Resource commands talk to a running instance over HTTP and mirror the
+// app's menu functions. They take (options, action, args) instead of just
+// (options), so they are dispatched separately from the lifecycle commands.
+const RESOURCE_COMMANDS = {
+  session: sessionCommand,
+  agent: agentCommand,
+  command: commandResourceCommand,
+  skill: skillCommand,
+  mcp: mcpCommand,
+  snippet: snippetCommand,
+  provider: providerCommand,
+  project: projectCommand,
+  config: configCommand,
+};
+
 async function main() {
   const parsed = parseArgs();
-  const { command, subcommand, tunnelAction, startupAction, options, removedFlagErrors, helpRequested, versionRequested } = parsed;
+  const { command, subcommand, tunnelAction, startupAction, positionals, options, removedFlagErrors, helpRequested, versionRequested } = parsed;
   activeCommandOptions = options;
 
   if (versionRequested) {
@@ -255,9 +282,18 @@ async function main() {
       showStartupHelp();
     } else if (command === 'connect-url') {
       showConnectUrlHelp();
+    } else if (RESOURCE_COMMANDS[command]) {
+      showResourceHelp(command);
     } else {
       showHelp();
     }
+    return;
+  }
+
+  if (RESOURCE_COMMANDS[command]) {
+    const action = positionals[1];
+    const args = positionals.slice(2);
+    await RESOURCE_COMMANDS[command](options, action, args);
     return;
   }
 
@@ -272,7 +308,10 @@ async function main() {
   }
 
   if (!commands[command]) {
-    const knownCommands = ['serve', 'stop', 'restart', 'status', 'tunnel', 'startup', 'logs', 'update'];
+    const knownCommands = [
+      'serve', 'stop', 'restart', 'status', 'tunnel', 'startup', 'logs', 'update',
+      'session', 'agent', 'command', 'skill', 'mcp', 'snippet', 'provider', 'project', 'config',
+    ];
     const suggestion = findClosestMatch(command, knownCommands);
     const hint = suggestion ? ` Did you mean '${suggestion}'?` : '';
     if (isJsonMode(options)) {
