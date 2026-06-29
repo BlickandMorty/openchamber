@@ -34,7 +34,7 @@ export interface MobileWidgetSnapshot {
   updatedAt: number;
 }
 
-const RECENT_LIMIT = 8;
+const RECENT_LIMIT = 6;
 
 const parentIdOf = (session: Session): string | null =>
   (session as Session & { parentID?: string | null }).parentID ?? null;

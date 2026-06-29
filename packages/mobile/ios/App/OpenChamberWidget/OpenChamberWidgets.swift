@@ -167,7 +167,7 @@ struct SessionsWidgetView: View {
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             } else {
                 VStack(spacing: 0) {
-                    ForEach(entry.snapshot.recentSessions.prefix(8)) { session in
+                    ForEach(entry.snapshot.recentSessions.prefix(6)) { session in
                         row(session)
                     }
                 }
