@@ -16,13 +16,24 @@ import { useUIStore } from '@/stores/useUIStore';
  * additionally gates on the `nativeNotificationsEnabled` setting and re-registers when
  * the connection (and thus the active server endpoint) changes.
  */
+// Push is APNs-only today: the server/relay path and token handling target iOS. On Android the
+// @capacitor/push-notifications plugin's register() goes through Firebase (FCM), which crashes
+// with "Default FirebaseApp is not initialized" until FCM is set up (google-services.json + the
+// Google Services Gradle plugin). Gate registration to iOS so the Android app runs; wire FCM up
+// as a separate piece of work (see local-dev-android-push.md).
+const isApplePushPlatform = (): boolean => {
+  if (typeof window === 'undefined') return false;
+  const capacitor = (window as typeof window & { Capacitor?: { getPlatform?: () => string } }).Capacitor;
+  return capacitor?.getPlatform?.() === 'ios';
+};
+
 export const useNativePushRegistration = (options: { enabled: boolean }): void => {
   const { enabled } = options;
   const nativeNotificationsEnabled = useUIStore((state) => state.nativeNotificationsEnabled);
   const lastTokenRef = React.useRef<string | null>(null);
 
   React.useEffect(() => {
-    if (!enabled || !nativeNotificationsEnabled) {
+    if (!enabled || !nativeNotificationsEnabled || !isApplePushPlatform()) {
       return;
     }
 

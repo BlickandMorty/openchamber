@@ -105,6 +105,13 @@ const useNativeMobileChrome = (): void => {
     // Marks the Capacitor shell so keyboard-inset CSS only applies here, not in
     // the browser-hosted PWA (which handles the keyboard via dvh / interactive-widget).
     root.classList.add('oc-capacitor-app');
+    // Platform marker: Android resizes the window for the keyboard (no manual inset), so the
+    // shell's height transition (meant for iOS's animated --oc-keyboard-inset) must be off there
+    // — otherwise the height animates against the instant native resize and the header bounces.
+    const capacitorPlatform = (window as typeof window & { Capacitor?: { getPlatform?: () => string } }).Capacitor?.getPlatform?.();
+    if (capacitorPlatform === 'android') {
+      root.classList.add('oc-platform-android');
+    }
 
     const setInset = (px: number) => {
       root.style.setProperty('--oc-keyboard-inset', `${Math.max(0, Math.round(px))}px`);
@@ -116,7 +123,24 @@ const useNativeMobileChrome = (): void => {
       // (iOS 26) plus returning from background can silently drop the overlay state,
       // letting an opaque status-bar background flash in at the top — so re-assert it
       // on mount, once shortly after (startup race), and whenever the app re-activates.
+      const platform = (window as typeof window & { Capacitor?: { getPlatform?: () => string } }).Capacitor?.getPlatform?.();
       const applyStatusBar = async () => {
+        if (platform === 'android') {
+          // Android doesn't feed env(safe-area-inset-top) to CSS, so overlaying the status bar
+          // makes content render under it. Inset the WebView below the bar instead and paint the
+          // bar with the resolved theme background (the splash colours the theme system persists).
+          const isDark = document.documentElement.classList.contains('dark');
+          const themeBg =
+            (isDark ? localStorage.getItem('splashBgDark') : localStorage.getItem('splashBgLight')) ||
+            (isDark ? '#171515' : '#fffdf4');
+          await StatusBar.setOverlaysWebView({ overlay: false }).catch(() => undefined);
+          await StatusBar.setBackgroundColor({ color: themeBg }).catch(() => undefined);
+          // Capacitor Style is named for the CONTENT: Style.Light = dark text (light bg),
+          // Style.Dark = light text (dark bg). So dark theme → Style.Dark, light theme → Style.Light.
+          await StatusBar.setStyle({ style: isDark ? Style.Dark : Style.Light }).catch(() => undefined);
+          await StatusBar.show().catch(() => undefined);
+          return;
+        }
         await StatusBar.setStyle({ style: Style.Default }).catch(() => undefined);
         await StatusBar.setOverlaysWebView({ overlay: true }).catch(() => undefined);
         await StatusBar.show().catch(() => undefined);
@@ -138,6 +162,12 @@ const useNativeMobileChrome = (): void => {
 
     void import('@capacitor/keyboard').then(async ({ Keyboard }) => {
       if (disposed) return;
+      // iOS (WKWebView, resize: 'none') keeps 100dvh at full height with the keyboard
+      // overlaying, so we lift the UI manually via --oc-keyboard-inset. Android resizes the
+      // window for the keyboard (dvh already shrinks), so applying the inset on top double-
+      // counts and floats the composer a keyboard-height above the keyboard — skip it there.
+      const platform = (window as typeof window & { Capacitor?: { getPlatform?: () => string } }).Capacitor?.getPlatform?.();
+      if (platform === 'android') return;
       await Keyboard.setAccessoryBarVisible({ isVisible: true }).catch(() => undefined);
 
       // `keyboardWillShow` fires at the START of the iOS keyboard animation and
@@ -165,7 +195,7 @@ const useNativeMobileChrome = (): void => {
     return () => {
       disposed = true;
       cleanup.forEach((remove) => remove());
-      root.classList.remove('oc-capacitor-app', 'oc-keyboard-open');
+      root.classList.remove('oc-capacitor-app', 'oc-keyboard-open', 'oc-platform-android');
       root.style.removeProperty('--oc-keyboard-inset');
     };
   }, []);
