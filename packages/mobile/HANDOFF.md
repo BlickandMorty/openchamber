@@ -1,160 +1,191 @@
 # OpenChamber Mobile Handoff
 
-This handoff summarizes the mobile app work completed in this worktree and the current local machine state for continuing native iOS/Android iteration.
+Status and process reference for the native iOS/Android apps. Written so work can continue after
+merge — either by finishing CI/release automation, or by adding features as follow-up fixes. The
+apps are feature-complete for a first public/TestFlight-style test; CI/signing is the main gap.
 
-## What Is In Place
+## What this package is
 
-- `packages/mobile` is now a Capacitor workspace package.
-- The mobile package packages the existing hosted mobile web entry, not the desktop app root.
-- `packages/mobile/scripts/prepare-web-assets.mjs` copies `packages/web/dist` into `packages/mobile/dist` and rewrites `mobile.html` to `index.html`, so Capacitor launches `MobileApp` directly.
-- Native Capacitor projects have been generated under:
-  - `packages/mobile/ios`
-  - `packages/mobile/android`
-- Generated native ignores exclude copied web assets, Pods, Gradle outputs, APKs, and local SDK paths.
-- Root package scripts expose mobile build/sync/simulator commands.
-- The dedicated mobile renderer no longer uses the web `SessionAuthGate`; native mobile owns its own connection onboarding flow.
-- The native mobile connection flow supports server URL entry, password unlock for locked servers, client-token storage, saved connections, and an `Instances` management sheet.
-- Mobile connection onboarding and `Instances` are Capacitor-only. Hosted `mobile.html` in a normal browser does not expose them.
-- Server CORS now allows packaged/mobile origins such as `capacitor://localhost` plus local dev origins like `http://127.0.0.1:<port>`.
+`packages/mobile` is a Capacitor workspace that wraps the **hosted mobile web UI** (the `MobileApp`
+renderer), not the desktop shell. The native app is a WKWebView (iOS) / Android WebView loading a
+bundled copy of the web build; native capabilities are added via Capacitor plugins and two iOS app
+extensions.
 
-## Key Commands
+- App id / package: `com.openchamber.app`; app name `OpenChamber`.
+- Capacitor config: `capacitor.config.ts` (Keyboard `resize: 'none'`, StatusBar overlay, Push
+  `presentationOptions: []`).
+- Renderer: the web build's `mobile.html` entry (`MobileApp`), copied into `dist/` and served by
+  Capacitor. Mobile-only surfaces (connection onboarding, `Instances`, QR pairing, widgets) exist
+  only in the Capacitor shell — hosted `mobile.html` in a plain browser does not expose them.
 
-From the repo root:
+## Build pipeline (how a native build is produced)
 
-```sh
-bun run mobile:build
-bun run mobile:sync
-bun run mobile:build:android:debug
-bun run mobile:build:ios:simulator
+```
+bun run --cwd packages/web build          # web/dist
+  → scripts/prepare-web-assets.mjs         # copy web/dist → mobile/dist, mobile.html → index.html
+    → cap sync                             # copy dist → native, sync plugins/config
+      → xcodebuild / gradle assembleDebug  # native binary
 ```
 
-iOS simulator helpers:
+`sync` (in `packages/mobile/package.json`) runs `bun run build && cap sync` inside the mobile env
+wrapper. Everything native-facing goes through `scripts/with-mobile-env.mjs`.
+
+### `with-mobile-env.mjs` (toolchain wrapper — read this before debugging build env issues)
+
+Every build/deploy script runs through it. It sets, with env overrides honored first:
+
+- `DEVELOPER_DIR` — `$DEVELOPER_DIR` → `xcode-select -p` → `/Applications/Xcode.app/...`. It
+  intentionally honors `xcode-select` so an Xcode beta / non-default install is used (hardcoding
+  the path previously forced builds onto the wrong Xcode / Command Line Tools).
+- `JAVA_HOME` — `$JAVA_HOME` → `/opt/homebrew/opt/openjdk@21`.
+- `ANDROID_HOME` / `ANDROID_SDK_ROOT` — `$ANDROID_HOME` → `/opt/homebrew/share/android-commandlinetools`.
+- `PATH` — prepends `$JAVA_HOME/bin` and `$ANDROID_HOME/platform-tools` (so `adb` resolves).
+
+On another machine, override these env vars rather than editing the script. `xcode-select` may
+point at Command Line Tools; the wrapper's `DEVELOPER_DIR` handling covers that for mobile commands.
+
+## Commands
+
+Root aliases (from repo root):
 
 ```sh
-bun run mobile:sim:boot
-bun run mobile:sim:install
-bun run mobile:sim:launch
-bun run mobile:sim:run
-bun run mobile:sim:serve
-bun run mobile:sim:list
-bun run mobile:sim:kill
-```
-
-`packages/mobile/scripts/with-mobile-env.mjs` sets local defaults for:
-
-- `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer`
-- `JAVA_HOME=/opt/homebrew/opt/openjdk@21`
-- `ANDROID_HOME=/opt/homebrew/share/android-commandlinetools`
-- `ANDROID_SDK_ROOT=/opt/homebrew/share/android-commandlinetools`
-
-Override these env vars if continuing on another machine.
-
-## Local Machine Tooling State
-
-The Mac has:
-
-- Xcode 26.5 at `/Applications/Xcode.app`.
-- Homebrew installed.
-- `openjdk@17` installed.
-- `openjdk@21` installed and used for Android Gradle builds.
-- CocoaPods installed.
-- Android command-line tools installed at `/opt/homebrew/share/android-commandlinetools`.
-- Android SDK licenses accepted.
-- Android SDK packages installed: `platform-tools`, `platforms;android-35`, `build-tools;35.0.0`; Gradle also installed `build-tools;34.0.0` during build.
-
-System `xcode-select` still points at Command Line Tools. The project scripts avoid this by setting `DEVELOPER_DIR` for mobile commands.
-
-## Verified Builds
-
-These commands were verified successfully:
-
-```sh
-bun run mobile:sync
-bun run mobile:build:android:debug
-bun run mobile:build:ios:simulator
+bun run mobile:build                 # web build + prepare-web-assets
+bun run mobile:sync                  # build + cap sync
+bun run mobile:build:android:debug   # sync + gradle assembleDebug
+bun run mobile:build:ios:simulator   # simulator build (strips MLKit pod, see quirks)
+bun run mobile:open:ios              # open in Xcode
+bun run mobile:open:android          # open in Android Studio
 bun run type-check:mobile
 bun run lint:mobile
 ```
 
-Known build warnings are inherited from the web build: KaTeX font URL resolution warnings, `onnxruntime-web` eval warning, dynamic/static import chunk warnings, and large chunk warnings. They did not fail the build.
-
-## serve-sim Status
-
-`serve-sim` was cloned locally to:
-
-```txt
-/Users/btriapitsyn/projects/serve-sim
-```
-
-`serve-sim` was added as a dev dependency of `packages/mobile` and is currently at npm latest verified during the session:
-
-```txt
-0.1.43
-```
-
-OpenChamber-specific agent guidance was added at:
-
-```txt
-.agents/skills/serve-sim/SKILL.md
-```
-
-`AGENTS.md` now maps iOS Simulator / `serve-sim` work to that skill.
-
-The simulator preview was tested with:
+Android physical-device deploy (adb-based, in `scripts/android-device.mjs`) — **not aliased at
+root**, run from the package:
 
 ```sh
-bun run mobile:sim:run
-serve-sim --host 0.0.0.0 -p 3200
+bun run --cwd packages/mobile android:devices   # list adb devices (want `device`, not `unauthorized`)
+bun run --cwd packages/mobile android:install    # adb install -r the debug APK
+bun run --cwd packages/mobile android:launch     # am start MainActivity
+bun run --cwd packages/mobile android:run         # install + launch
+bun run --cwd packages/mobile android:logcat      # app logs
 ```
 
-The app launched in the iOS Simulator and raw MJPEG stream produced bytes from:
+Typical device iteration: `bun run --cwd packages/mobile build:android:debug` then
+`android:run`. APK path: `android/app/build/outputs/apk/debug/app-debug.apk`.
 
-```txt
-http://127.0.0.1:3100/stream.mjpeg
+iOS Simulator helpers: `mobile:sim:{boot,install,launch,run,serve,list,kill}` (see
+`scripts/ios-sim.mjs`; `serve-sim` for a browser preview of the simulator).
+
+## Native capabilities implemented
+
+- **Connection onboarding** — server URL entry, password unlock for locked servers, client-token
+  issuance, saved connections, `Instances` management sheet, auto-connect to the last instance on
+  launch. Deleting the active instance resets the runtime to the connect screen.
+- **QR pairing** — `@capacitor-mlkit/barcode-scanning`. Android's Google code scanner module is
+  downloaded on first scan (needs Play Services + network); `mobileQrScan.ts` installs/awaits it
+  and retries. CAMERA permission + `NSCameraUsageDescription` declared.
+- **Secure storage** — `@aparajita/capacitor-secure-storage` for connection tokens.
+- **Deep links** — `openchamber://` URL scheme; a reusable intent vocabulary (`apps/deepLinks.ts`)
+  used by notification taps, widgets, and Control Center. Cold-launch intents are stashed.
+- **Push notifications** — iOS APNs + Android FCM (see below). Presence-aware routing suppresses a
+  device's push when an interactive (desktop/web) client is visible.
+- **iOS widgets + Control Center + Notification Service Extension** — WidgetKit extension
+  (`OpenChamberWidget`), a Control Center control, and an NSE (`OpenChamberNotificationService`)
+  that refreshes widgets from push. All share the App Group `group.com.openchamber.app`.
+- **Native chrome** — status bar (iOS overlay + safe-area; Android inset + themed background),
+  keyboard handling (iOS CSS inset; Android native `adjustResize`), edge-swipe session switch,
+  back-button handling, app-icon badge.
+- **App icons** — iOS `AppIcon`; Android adaptive launcher icon; notification small icon
+  (`ic_stat_notify`).
+
+## Push / notifications architecture
+
+- Registration: on launch the app registers a device token — **iOS → APNs, Android → FCM** — and
+  sends it to the connected server tagged with `platform` (`ios`/`android`).
+- The server forwards notification-worthy events to a signed **relay**; the relay routes each token
+  to APNs or FCM by its bound platform. The app itself only needs to obtain and register the token.
+- **Presence-aware suppression**: each client reports foreground visibility + its platform; a
+  mobile push is skipped while an interactive (desktop/web/vscode) client is visible (it already
+  shows the in-app notification). Gated on the desktop's visibility, never the phone's own.
+- Foreground behavior: iOS suppresses the banner via `presentationOptions: []`; the web/PWA service
+  worker suppresses when a window is focused.
+
+## Platform config specifics
+
+### iOS (`ios/App`)
+
+- Extensions: `OpenChamberWidget` (WidgetKit, deployment 17.0) and `OpenChamberNotificationService`
+  (NSE, 15.5), both hand-wired into `App.xcodeproj/project.pbxproj` and embedded via a copy phase.
+- App Group `group.com.openchamber.app` in all three targets' entitlements (app + widget + NSE).
+- `Info.plist`: `CFBundleURLTypes` scheme `openchamber`, `NSCameraUsageDescription`.
+- Push entitlement (aps-environment) required.
+- APNs `mutable-content: 1` (set server/relay side) wakes the NSE to refresh widgets.
+
+### Android (`android/app`)
+
+- `google-services.json` (committed; Firebase project `openchamber-8bf7e`). The Google Services
+  Gradle plugin is applied conditionally when the file exists; `@capacitor/push-notifications`
+  brings `firebase-messaging`.
+- Manifest: permissions `INTERNET`, `CAMERA` (+ optional camera feature), `POST_NOTIFICATIONS`
+  (Android 13+; older versions allow notifications by default). `windowSoftInputMode=adjustResize`.
+  ML Kit `com.google.mlkit.vision.DEPENDENCIES=barcode_ui` meta (preloads the code scanner). FCM
+  `default_notification_icon=@drawable/ic_stat_notify`.
+- Adaptive launcher icon: full-bleed color background + `ic_launcher_foreground` (sources under
+  `packages/mobile/assets/`, regenerable with `@capacitor/assets`).
+
+## Quirks / gotchas
+
+- **iOS Simulator + MLKit**: `GoogleMLKit` barcode has no arm64-simulator slice, so
+  `scripts/ios-sim-build.mjs` temporarily strips the `CapacitorMlkitBarcodeScanning` pod, builds,
+  then restores it. Device builds include it normally.
+- **Android WebView version**: the UI uses `color-mix()` (Tailwind v4 + theme) which needs
+  Chromium **111+**. An outdated Android System WebView renders translucency/selection wrong — tell
+  testers to keep Android System WebView updated (or use a device with a current one).
+- **Capacitor stream transport is locked to SSE** on the native apps (native WebSocket streaming is
+  unreliable on Android). The Chat transport setting shows SSE selected and disables the others in
+  the Capacitor shell.
+- **Android push needs the app rebuilt with `google-services.json`**; without it `register()` used
+  to crash ("Default FirebaseApp is not initialized"). Registration is gated to iOS/Android natives.
+
+## Validation
+
+```sh
+bun run type-check:mobile
+bun run lint:mobile
+bun run mobile:build:android:debug
+bun run mobile:build:ios:simulator
 ```
 
-However, the browser preview UI on the phone showed:
+Web-inherited build warnings (KaTeX font URLs, `onnxruntime-web` eval, chunk-size) are expected and
+non-fatal.
 
-```txt
-Stream is not producing frames. The simulator may have stopped — try reconnecting.
-```
+## The gap: CI / release automation (next work)
 
-After testing, all `serve-sim` helper/preview processes were stopped with `bun run mobile:sim:kill` and direct port checks confirmed `127.0.0.1:3100` and `127.0.0.1:3200` were no longer serving.
+The apps build and deploy locally; there is no CI/signing/publishing yet. To take them to
+TestFlight / Play internal testing:
 
-Likely follow-up: investigate `serve-sim` preview behavior on macOS 27 beta / Xcode 26.5. The raw stream working suggests the issue may be preview UI reconnect/state handling or beta OS compatibility rather than app build/install.
+### iOS
 
-## Simulator Device Note
+- Apple Developer account; App IDs for the app **and** both extensions
+  (`com.openchamber.app`, `.OpenChamberWidget`, `.OpenChamberNotificationService`), each enabled for
+  the **App Group** and (app) **Push**.
+- Signing certificate + provisioning profiles for all three targets (extensions need their own).
+- App Store Connect API key for non-interactive TestFlight upload (`xcodebuild archive` +
+  `notarytool`/`altool`, or fastlane `gym`+`pilot`).
+- Runner: macOS with the same Xcode as `DEVELOPER_DIR`.
 
-The available iOS simulator set is iOS 26.5. The default simulator helper uses:
+### Android
 
-```txt
-iPhone 17 Pro
-```
+- Release keystore (kept as a CI secret); build a signed **AAB** (`bundleRelease`) — the debug
+  scripts here produce an unsigned debug APK.
+- Play Console app + internal testing track; a Play service account for automated upload (fastlane
+  `supply` or the Play Developer API).
+- `google-services.json` is committed, so FCM builds in CI without extra setup.
+- Runner: Linux with the Android SDK + `openjdk@21`.
 
-The earlier default `iPhone 16 Pro` was not available on this machine.
+### Notes for CI
 
-## Product/Architecture State
-
-This work now includes the first mobile connection/auth shell, but still does not implement QR scanning, secure native storage, push notifications, biometrics, deep links, or native lifecycle handling.
-
-Current mobile connection behavior:
-
-- If no runtime is connected in Capacitor, the app shows a connect screen instead of the web UI auth error.
-- A server URL can be entered manually.
-- If the server is password-protected, the app prompts for the password and requests an issued client token.
-- Saved instances are stored in browser/WebView local storage under the mobile connections key.
-- The overflow menu has a Capacitor-only `Instances` sheet for adding, editing, deleting, and switching saved instances.
-- Deleting the active instance resets the active runtime and returns the app to the connect screen.
-
-Remaining production hardening:
-
-- Move saved instance tokens from local storage to native secure storage.
-- Implement QR pairing and camera permission flow.
-- Add a first-class server-side pairing/token issuance route instead of relying on manual URL/password entry.
-- Add explicit logout/revoke-token behavior.
-- Add native lifecycle/back-button/status-bar/keyboard handling.
-
-Next useful product step after simulator streaming is stable:
-
-- Define the remote packaged-client auth token model.
-- Keep inspecting the mobile import graph and bundle size; current mobile graph still includes heavy shared chunks.
+- Reuse `with-mobile-env.mjs`'s env contract (`DEVELOPER_DIR`, `JAVA_HOME`, `ANDROID_HOME`) — set
+  them in the workflow instead of relying on local Homebrew paths.
+- Relay/push secrets (APNs key, FCM service account) live in the relay infrastructure, not app CI.
+- Version/build-number bumping is not automated yet.
