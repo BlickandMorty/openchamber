@@ -3949,6 +3949,17 @@ export function createMessengerOpencodeBridge({
     // current work and run this one as soon as the aborted turn settles. /queue
     // is the opt-in path for "wait for the current response to finish".
     if (busySessions.has(sessionId)) {
+      // Broadcast the incoming message IMMEDIATELY so the UI can show it
+      // before the current turn is aborted — avoids the "stuck" gap.
+      broadcastEvent?.('messenger.discord.supersede_incoming', {
+        type: 'discord',
+        sessionId,
+        channelId: ctx.channelId,
+        threadId: ctx.threadId,
+        text,
+        from: from ? { username: from.username, firstName: from.firstName } : null,
+        projectPath: effectiveProjectPath,
+      });
       pendingSupersede.set(sessionId, sendPrompt);
       void postToSurface(ctx, '⏹ _Stopped the current turn to run your new message._');
       const aborted = await opencodeAdapter

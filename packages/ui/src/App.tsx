@@ -16,6 +16,7 @@ import { usePushVisibilityBeacon } from '@/hooks/usePushVisibilityBeacon';
 import { useOttoWebSocket } from '@/hooks/useOttoWebSocket';
 import { useMessengerBridgeToasts } from '@/hooks/useMessengerBridgeToasts';
 import { useMessengerProjectChannelSync } from '@/hooks/useMessengerProjectChannelSync';
+import { useDiscordSupersedeMessages } from '@/hooks/useDiscordSupersedeMessages';
 import { useWebNotificationStream } from '@/hooks/useWebNotificationStream';
 import { usePwaInstallPrompt } from '@/hooks/usePwaInstallPrompt';
 import { useWindowTitle } from '@/hooks/useWindowTitle';
@@ -711,6 +712,8 @@ function App({ apis }: AppProps) {
   useMessengerBridgeToasts();
   // Mirror UI project add/rename/remove to Discord channels (two-way sync).
   useMessengerProjectChannelSync();
+  // Show incoming Discord supersede messages immediately in the chat.
+  useDiscordSupersedeMessages();
   useWebNotificationStream({ enabled: embeddedBackgroundWorkEnabled });
   usePwaInstallPrompt();
 
