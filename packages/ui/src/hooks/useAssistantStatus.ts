@@ -6,8 +6,9 @@ import { useSessionUIStore } from '@/sync/session-ui-store';
 import { useDirectorySync, useSessionPermissions, useSessionQuestions, useSessionStatus } from '@/sync/sync-context';
 import { isFullySyntheticMessage } from '@/lib/messages/synthetic';
 import { useCurrentSessionActivity } from './useSessionActivity';
+import { usePendingDiscordStore } from '@/stores/usePendingDiscordStore';
 
-export type AssistantActivity = 'idle' | 'streaming' | 'tooling' | 'cooldown' | 'permission';
+type AssistantActivity = 'idle' | 'streaming' | 'tooling' | 'cooldown' | 'permission';
 
 interface WorkingSummary {
     activity: AssistantActivity;
@@ -282,6 +283,16 @@ export function useAssistantStatus(): AssistantStatusSnapshot {
     const sessionPermissionRequests = useSessionPermissions(currentSessionId ?? '', currentSessionDirectory ?? undefined);
     const sessionQuestionRequests = useSessionQuestions(currentSessionId ?? '', currentSessionDirectory ?? undefined);
 
+    // Pending Discord supersede — when a Discord message has been received
+    // but the real response hasn't started streaming yet, we show a specific
+    // status to avoid the "stuck" appearance.
+    const pendingDiscordMessage = usePendingDiscordStore(
+        React.useCallback(
+            (s) => (currentSessionId ? s.pending[currentSessionId] ?? null : null),
+            [currentSessionId],
+        ),
+    );
+
     const sessionAbortRecord = useSessionUIStore(
         React.useCallback((state) => {
             if (!currentSessionId) {
@@ -377,6 +388,23 @@ export function useAssistantStatus(): AssistantStatusSnapshot {
     }, [isPhaseWorking, parsedStatus.activePartType]);
 
     const working = React.useMemo<WorkingSummary>(() => {
+        // When a Discord message supersede is in flight, show it as working
+        // with a specific status text — even during the brief idle gap while
+        // the abort settles and the new prompt starts processing.
+        if (pendingDiscordMessage && currentSessionId) {
+            return {
+                ...baseWorking,
+                wasAborted: false,
+                abortActive: false,
+                isWorking: true,
+                isStreaming: true,
+                activity: 'streaming',
+                statusText: 'Responding to Discord message',
+                isGenericStatus: false,
+                canAbort: true,
+            };
+        }
+
         if (baseWorking.wasAborted || baseWorking.abortActive) {
             return baseWorking;
         }
@@ -409,7 +437,7 @@ export function useAssistantStatus(): AssistantStatusSnapshot {
             canAbort: false,
             retryInfo: null,
         };
-    }, [baseWorking, sessionPermissionRequests, sessionQuestionRequests]);
+    }, [baseWorking, sessionPermissionRequests, sessionQuestionRequests, pendingDiscordMessage, currentSessionId]);
 
     return {
         forming,
