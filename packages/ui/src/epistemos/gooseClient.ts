@@ -381,7 +381,25 @@ export class GooseEngineClient {
     }
 
     async getSession(sessionId: string): Promise<GooseSession> {
-        return gooseJson<GooseSession>(`/sessions/${encodeURIComponent(sessionId)}`);
+        const session = await gooseJson<GooseSession>(`/sessions/${encodeURIComponent(sessionId)}`);
+        this.syncIndexTitleFromSession(sessionId, session);
+        return session;
+    }
+
+    // goosed is the source of truth for a session's name: it auto-generates one
+    // after >3 messages (goose session_naming.rs) and RESPECTS user_set_name, so
+    // its name is either the user's own title or the authoritative auto-title —
+    // never an auto-override of a user rename. Reflect it into our cached index
+    // title (the merged sidebar's source via listIndexedSessions) so goose rows
+    // don't stay stuck on the "New Chat" placeholder after goosed has titled
+    // them. One-shot + guarded: only writes when goosed has a non-empty name
+    // that differs from the cached title, so it's a no-op on every later fetch.
+    private syncIndexTitleFromSession(sessionId: string, session: GooseSession): void {
+        const name = typeof session.name === 'string' ? session.name.trim() : '';
+        if (!name) return;
+        const entry = this.index.find((e) => e.id === sessionId);
+        if (!entry || entry.title === name) return;
+        this.touchIndexEntry(sessionId, (e) => ({ ...e, title: name }));
     }
 
     async renameSession(sessionId: string, name: string): Promise<void> {
