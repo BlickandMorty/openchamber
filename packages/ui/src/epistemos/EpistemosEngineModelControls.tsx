@@ -14,7 +14,7 @@ import { Icon } from '@/components/icon/Icon';
 
 const MemoModelControls = React.memo(ModelControls);
 
-type GooseProvider = { name: string; displayName: string; models: string[] };
+type GooseProvider = { name: string; displayName: string; defaultModel: string; models: string[] };
 
 const GooseModelButton: React.FC<{ className?: string }> = ({ className }) => {
     const currentSessionId = useSessionUIStore((s) => s.currentSessionId);
@@ -22,6 +22,8 @@ const GooseModelButton: React.FC<{ className?: string }> = ({ className }) => {
     const [active, setActive] = React.useState<string | null>(null);
     const [open, setOpen] = React.useState(false);
     const rootRef = React.useRef<HTMLDivElement>(null);
+    // Guards the initial load from clobbering a fast user pick (pick-during-load race).
+    const pickedRef = React.useRef(false);
 
     React.useEffect(() => {
         let cancelled = false;
@@ -31,7 +33,7 @@ const GooseModelButton: React.FC<{ className?: string }> = ({ className }) => {
         ]).then(([ps, a]) => {
             if (cancelled) return;
             setProviders(ps);
-            setActive(a);
+            if (!pickedRef.current) setActive(a);
         });
         return () => {
             cancelled = true;
@@ -48,9 +50,14 @@ const GooseModelButton: React.FC<{ className?: string }> = ({ className }) => {
     }, [open]);
 
     const activeProvider = providers.find((p) => p.name === active);
-    const label = activeProvider?.displayName ?? active ?? 'Select goose provider';
+    const label = activeProvider
+        ? activeProvider.defaultModel
+            ? `${activeProvider.displayName} · ${activeProvider.defaultModel}`
+            : activeProvider.displayName
+        : active ?? 'Select goose provider';
 
     const pick = async (name: string) => {
+        pickedRef.current = true;
         setActive(name);
         setOpen(false);
         // Persist as goose's config default so a NEW draft's session (created on

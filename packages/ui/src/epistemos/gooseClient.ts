@@ -440,7 +440,7 @@ export class GooseEngineClient {
      *  GET /config/providers), with their display name + known model names.
      *  Only is_configured providers — the ones goose can actually run. */
     async listConfiguredProviders(): Promise<
-        Array<{ name: string; displayName: string; models: string[] }>
+        Array<{ name: string; displayName: string; defaultModel: string; models: string[] }>
     > {
         const raw = await this.providers();
         const list = Array.isArray(raw) ? (raw as Array<Record<string, unknown>>) : [];
@@ -452,6 +452,7 @@ export class GooseEngineClient {
                 return {
                     name: String(p.name ?? ''),
                     displayName: String(meta.display_name ?? p.name ?? ''),
+                    defaultModel: typeof meta.default_model === 'string' ? meta.default_model : '',
                     models: known.map((m) => String(m.name ?? '')).filter(Boolean),
                 };
             })
