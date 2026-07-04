@@ -6,6 +6,11 @@
 // index, every call passes through — zero behavior change until the engine
 // chip creates one.
 
+// Side-effect: in the Pro embed, reroute external window.open() through a
+// main-frame nav so the native decider opens it in the system browser (fixes
+// dead OAuth/external links). Imported here because engineDispatch loads early
+// via the opencode client singleton. See epistemos/embedExternalLinks.ts.
+import '@/epistemos/embedExternalLinks';
 import { gooseEngineClient, gooseLiveAssistantMessageId } from '@/epistemos/gooseClient';
 import { emitGooseEvent } from '@/epistemos/gooseEventBridge';
 import {
