@@ -40,9 +40,12 @@ aside.oc-vibrancy-surface {
        transform/opacity only (doctrine: never animate layout props). */
     transition: transform 220ms cubic-bezier(0.22, 1, 0.36, 1) !important;
     /* Flat + borderless: drop the hard 1px rule, differentiate with a soft
-       shadow + a larger theme radius on the exposed edge. */
+       shadow + a larger theme radius on the exposed edge. Shadow is THEME-AWARE
+       (derived from --foreground via oklch color-mix) so it reads as a soft
+       dark shadow on light themes AND a subtle luminous edge on dark themes —
+       never the hardcoded-black rule that vanishes in dark mode. */
     border-right: 0 !important;
-    box-shadow: 0 8px 30px -8px rgba(0, 0, 0, 0.28);
+    box-shadow: 0 8px 30px -8px color-mix(in oklch, var(--foreground) 22%, transparent);
     border-top-right-radius: var(--radius-xl);
     border-bottom-right-radius: var(--radius-xl);
 }
