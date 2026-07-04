@@ -14,6 +14,7 @@
 @import "./epistemos/landing/landing.css";
 @import "./epistemos/sidebarOverlay.css";
 @import "./epistemos/declutter.css";
+@import "./epistemos/chromeInset.css";
 @source "./**/*.{ts,tsx,css}";
 
 /* KaTeX theme overrides for light/dark mode */

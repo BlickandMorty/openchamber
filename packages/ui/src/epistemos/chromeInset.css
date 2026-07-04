@@ -1,0 +1,34 @@
+/* EPISTEMOS overlay — PATCH_LEDGER#PRO-CHROME-1 (Pro agent surface).
+   Owner 2026-07-04: the top-left titlebar controls (sidebar toggle + project
+   actions in the donor TitlebarLeftControls) collide with the macOS traffic
+   lights (close/minimize/zoom).
+
+   Root cause: TitlebarLeftControls positions its cluster with
+   `paddingLeft: var(--oc-titlebar-left-inset, 0.75rem)`. That var is COMPUTED and
+   set inline by Header.tsx:1593-1610 — and it returns the correct macOS value
+   ('5.5rem', which clears the lights AND is fullscreen-aware) ONLY when
+   `isDesktopApp` is true. The Pro embed is a native WKWebView that injects no
+   __OPENCHAMBER_DESKTOP__/__OPENCHAMBER_ELECTRON__ bridge, so `isDesktopShell()`
+   is false → `isDesktopApp` false → Header falls into the browser branch and
+   returns ~0.75rem (~12px), which sits under the traffic-light zone (~x8-70px).
+
+   Fix (web chrome → epistemos overlay per owner): force the donor's own macOS
+   inset. `!important` is REQUIRED because Header sets the var via an inline
+   `documentElement.style.setProperty(...)` (no priority), which a plain
+   stylesheet `:root` rule can't beat — a stylesheet `!important` does. Value =
+   the donor's macOS constant (5.5rem) so it's not an arbitrary magic number.
+   Electron builds are unaffected: this fork only ships the embed; a real Electron
+   build would set `isDesktopApp` true and Header's own 5.5rem would already win
+   (and match).
+
+   INTERIM: this is windowed-correct but NOT fullscreen-aware (the donor's real
+   logic zeroes toward 0.75rem in fullscreen via `isDesktopWindowFullscreen`,
+   which only the desktop bridge reports — the web can't detect macOS window
+   fullscreen). The proper fix injects the desktop-shell identity + a fullscreen
+   signal from the ProAgent host so Header's native branch (incl. fullscreen)
+   activates on its own; that is native and queued (native build blocked by
+   concurrent sibling xcodebuilds at authoring time). In fullscreen this leaves a
+   harmless left gap, never an overlap. */
+:root {
+    --oc-titlebar-left-inset: 5.5rem !important;
+}
