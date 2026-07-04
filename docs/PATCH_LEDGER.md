@@ -24,4 +24,4 @@ stock-upstream.
 |---|---|---|
 | R6a | `packages/ui/src/lib/opencode/client.ts` | engine-dispatch injection point (goose adapter behind the SDK-shaped seam) |
 | R6b | `packages/ui/src/sync/event-pipeline.ts` | goose event translation entry (only if the adapter cannot stay fully outside) |
-| R6c | `packages/ui/src/lib/theme/cssGenerator.ts` | emit `--landing-hero-wash` June gradient vars for every theme |
+| R6c | `packages/ui/src/lib/theme/cssGenerator.ts` | **LANDED**: `generateEpistemosLandingVariables` emits `--landing-hero-wash` (primary.base @ 11% oklch), `--landing-hero-wash-rim` (surface.elevated @ 70%), `--landing-hero-wash-gradient` for every theme. Formula provenance: docs/JUNE_SIGNATURE_MEASUREMENTS.md |

@@ -61,7 +61,21 @@ export class CSSVariableGenerator {
       cssVars.push(...this.generateConfigVariables(theme.config));
     }
 
+    cssVars.push(...this.generateEpistemosLandingVariables(theme));
+
     return cssVars.join('\n');
+  }
+
+  // EPISTEMOS(PATCH_LEDGER#R6c): theme-derived landing gradient, June's literal
+  // recipe measured from source (june tokens.css:229 + app.css .agent-workspace
+  // ::before). Emitted for EVERY theme including custom palettes so the landing
+  // wash always tracks the active primary — never a hardcoded warm value.
+  private generateEpistemosLandingVariables(theme: Theme): string[] {
+    return [
+      `  --landing-hero-wash: color-mix(in oklch, ${theme.colors.primary.base} 11%, transparent);`,
+      `  --landing-hero-wash-rim: color-mix(in oklch, ${theme.colors.surface.elevated} 70%, transparent);`,
+      `  --landing-hero-wash-gradient: linear-gradient(to bottom, transparent 30%, var(--landing-hero-wash));`,
+    ];
   }
 
   private generateTailwindVariables(theme: Theme): string[] {
