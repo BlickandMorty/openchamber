@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { Icon } from '@/components/icon/Icon';
 import type { IconName } from '@/components/icon/icons';
 import { gooseEngineClient } from '@/epistemos/gooseClient';
+import { useSessionUIStore } from '@/sync/session-ui-store';
 
 // EPISTEMOS overlay (Plan 1-PRO §7 Phase 4 / §8 goose-only row): a
 // self-contained, THEME-COMPLIANT, read-only panel that surfaces goose's
@@ -21,11 +22,13 @@ const asRows = (
 ): CapabilityRow[] => {
     if (!payload || typeof payload !== 'object') return [];
     const container = payload as Record<string, unknown>;
-    // Tolerate {manifests|jobs|extensions|items: [...]} or a bare array.
+    // Tolerate {manifests|jobs|extensions|tools|apps|items: [...]} or a bare array.
     const list =
         (container.manifests as unknown[]) ??
         (container.jobs as unknown[]) ??
         (container.extensions as unknown[]) ??
+        (container.tools as unknown[]) ??
+        (container.apps as unknown[]) ??
         (container.items as unknown[]) ??
         (Array.isArray(payload) ? (payload as unknown[]) : []);
     if (!Array.isArray(list)) return [];
@@ -77,6 +80,31 @@ const SECTIONS: Section[] = [
             asRows(await gooseEngineClient.listSchedules(), (item, index) => {
                 const title = str(item.id) ?? str(item.name) ?? `Job ${index + 1}`;
                 return { id: `job-${title}`, title, subtitle: str(item.cron) ?? str(item.source) };
+            }),
+    },
+    {
+        key: 'tools',
+        label: 'Tools & Skills',
+        icon: 'tools',
+        load: async () => {
+            const sid = useSessionUIStore.getState().currentSessionId;
+            if (!sid) return [];
+            return asRows(await gooseEngineClient.tools(sid), (item, index) => {
+                const name = str(item.name) ?? str(item.display_name);
+                if (!name) return null;
+                return { id: `tool-${name}-${index}`, title: name, subtitle: str(item.description) };
+            });
+        },
+    },
+    {
+        key: 'apps',
+        label: 'Apps & CLIs',
+        icon: 'terminal-box',
+        load: async () =>
+            asRows(await gooseEngineClient.listApps(), (item, index) => {
+                const name = str(item.name) ?? str(item.title);
+                if (!name) return null;
+                return { id: `app-${name}-${index}`, title: name, subtitle: str(item.description) };
             }),
     },
 ];

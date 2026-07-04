@@ -52,9 +52,27 @@ let nextSessionEngineSetAt = 0;
 
 const nowMs = (): number => (typeof Date !== 'undefined' ? Date.now() : 0);
 
+// Reactive intent: the composer bar must re-derive the WHOLE engine surface the
+// INSTANT the chip flips (owner: "it should change instantly ... not reload the
+// entire app"). So the intent notifies subscribers on every change; React
+// consumers subscribe via subscribeNextSessionEngine + useSyncExternalStore.
+const engineIntentListeners = new Set<() => void>();
+const notifyEngineIntent = (): void => {
+    for (const listener of engineIntentListeners) listener();
+};
+
+export const subscribeNextSessionEngine = (listener: () => void): (() => void) => {
+    engineIntentListeners.add(listener);
+    return () => {
+        engineIntentListeners.delete(listener);
+    };
+};
+
 export const setNextSessionEngine = (engine: EngineKind): void => {
+    const changed = nextSessionEngine !== engine;
     nextSessionEngine = engine;
     nextSessionEngineSetAt = engine === 'goose' ? nowMs() : 0;
+    if (changed) notifyEngineIntent();
 };
 
 export const getNextSessionEngine = (): EngineKind => {
@@ -67,8 +85,10 @@ export const getNextSessionEngine = (): EngineKind => {
 
 const consumeNextSessionEngine = (): EngineKind => {
     const engine = getNextSessionEngine();
+    const changed = nextSessionEngine !== 'opencode';
     nextSessionEngine = 'opencode';
     nextSessionEngineSetAt = 0;
+    if (changed) notifyEngineIntent();
     return engine;
 };
 

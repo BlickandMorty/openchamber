@@ -1,8 +1,8 @@
 import React from 'react';
 import { ModelControls } from '@/components/chat/ModelControls';
 import { useSessionUIStore } from '@/sync/session-ui-store';
-import { engineForSession, getNextSessionEngine } from '@/epistemos/engineDispatch';
 import { gooseEngineClient } from '@/epistemos/gooseClient';
+import { useActiveEngineIsGoose } from '@/epistemos/useActiveEngine';
 import { Icon } from '@/components/icon/Icon';
 
 // EPISTEMOS overlay (Plan 1-PRO §0.6 capability truth): the composer model
@@ -109,10 +109,7 @@ const GooseModelButton: React.FC<{ className?: string }> = ({ className }) => {
 };
 
 export const EpistemosEngineModelControls: React.FC<{ className?: string }> = ({ className }) => {
-    const currentSessionId = useSessionUIStore((s) => s.currentSessionId);
-    const isGoose = currentSessionId
-        ? engineForSession(currentSessionId) === 'goose'
-        : getNextSessionEngine() === 'goose';
+    const isGoose = useActiveEngineIsGoose();
     if (isGoose) return <GooseModelButton className={className} />;
     return <MemoModelControls className={className} />;
 };

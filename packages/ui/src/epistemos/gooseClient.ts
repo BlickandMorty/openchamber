@@ -518,6 +518,17 @@ export class GooseEngineClient {
         });
     }
 
+    /** goose's live tools/skills for a session (`GET /agent/tools?session_id=`).
+     *  Requires a session id (GetToolsQuery.session_id is required, snake_case). */
+    async tools(sessionId: string): Promise<unknown> {
+        return gooseJson<unknown>(`/agent/tools?session_id=${encodeURIComponent(sessionId)}`);
+    }
+
+    /** goose's available apps/CLIs (`GET /agent/list_apps`). */
+    async listApps(): Promise<unknown> {
+        return gooseJson<unknown>('/agent/list_apps');
+    }
+
     /**
      * Reply to a tool-confirmation request. goosed's ConfirmToolActionRequest is
      * `#[serde(rename_all = "camelCase")]` (goose-server/src/routes/
