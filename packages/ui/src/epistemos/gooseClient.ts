@@ -465,10 +465,14 @@ export class GooseEngineClient {
     }
 
     /**
-     * Reply to a tool-confirmation request (§3 corrected payload):
-     * `{id, action, session_id}` — `principal_type` is omitted because goosed
-     * defaults it to Tool server-side. Actions serialize snake_case
-     * (goose-providers/src/permission.rs).
+     * Reply to a tool-confirmation request. goosed's ConfirmToolActionRequest is
+     * `#[serde(rename_all = "camelCase")]` (goose-server/src/routes/
+     * action_required.rs), so the body keys are `{id, action, sessionId}` —
+     * `sessionId` (NOT snake_case session_id, which is a required field with no
+     * default → a snake_case key fails deserialization and the reply is dropped,
+     * hanging the tool). `principalType` is omitted (goosed defaults it to Tool).
+     * The `action` VALUES are snake_case — they map to the Permission enum
+     * (goose-providers/src/permission.rs, rename_all=snake_case).
      */
     async confirmToolAction(
         sessionId: string,
@@ -477,7 +481,7 @@ export class GooseEngineClient {
     ): Promise<void> {
         await gooseFetch('/action-required/tool-confirmation', {
             method: 'POST',
-            body: JSON.stringify({ id: confirmationId, action, session_id: sessionId }),
+            body: JSON.stringify({ id: confirmationId, action, sessionId }),
         });
     }
 
