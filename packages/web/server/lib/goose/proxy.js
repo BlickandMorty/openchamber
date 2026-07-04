@@ -45,7 +45,7 @@ const FORWARDED_REQUEST_HEADERS = new Set([
   'user-agent',
 ]);
 
-const buildUpstreamHeaders = (incoming, secret) => {
+export const buildUpstreamHeaders = (incoming, secret) => {
   const headers = {};
   for (const [name, value] of Object.entries(incoming)) {
     const lower = name.toLowerCase();
@@ -67,7 +67,7 @@ const buildUpstreamHeaders = (incoming, secret) => {
 // request that carries a cross-origin (non-loopback) Origin — that can only be
 // a hostile browsing context trying to drive goose with the injected secret.
 const LOOPBACK_HOSTS = new Set(['127.0.0.1', 'localhost', '[::1]', '::1']);
-const isLoopbackOriginAllowed = (req) => {
+export const isLoopbackOriginAllowed = (req) => {
   const origin = req.headers.origin;
   if (!origin || typeof origin !== 'string') return true;
   try {
