@@ -31,3 +31,5 @@ stock-upstream.
 | R6a | `packages/ui/src/lib/opencode/client.ts` | engine-dispatch injection point (goose adapter behind the SDK-shaped seam) |
 | R6b | `packages/ui/src/sync/event-pipeline.ts` | goose event translation entry (only if the adapter cannot stay fully outside) |
 | R6c | `packages/ui/src/lib/theme/cssGenerator.ts` | **LANDED**: `generateEpistemosLandingVariables` emits `--landing-hero-wash` (primary.base @ 11% oklch), `--landing-hero-wash-rim` (surface.elevated @ 70%), `--landing-hero-wash-gradient` for every theme. Formula provenance: docs/JUNE_SIGNATURE_MEASUREMENTS.md |
+
+| R6d | `packages/web/server/index.js` | import + `registerGooseProxyRoutes(app)` after `setupBaseRoutes` | Mounts the `/goose/*` same-origin proxy (new overlay file `lib/goose/proxy.js`, node:http streaming, X-Secret-Key attached server-side from `EPISTEMOS_GOOSE_PORT`/`EPISTEMOS_GOOSE_SECRET`); inert without the env. Smoke-verified against real goosed: direct-without-secret 401, via-proxy 200 |
