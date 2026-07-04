@@ -53,6 +53,10 @@ const GooseModelButton: React.FC<{ className?: string }> = ({ className }) => {
     const pick = async (name: string) => {
         setActive(name);
         setOpen(false);
+        // Persist as goose's config default so a NEW draft's session (created on
+        // send, via applyConfiguredProvider) adopts it too — not just the label.
+        await gooseEngineClient.setActiveProvider(name).catch(() => undefined);
+        // Apply immediately to a live session.
         if (currentSessionId) {
             await gooseEngineClient.setSessionProvider(currentSessionId, name).catch(() => undefined);
         }

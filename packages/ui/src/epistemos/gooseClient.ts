@@ -463,6 +463,17 @@ export class GooseEngineClient {
         return this.readGooseConfig('active_provider');
     }
 
+    /** Persist the goose config's active_provider (goosed /config/upsert;
+     *  UpsertConfigQuery is snake_case: {key, value, is_secret}). Non-secret.
+     *  createSession's applyConfiguredProvider reads this, so a provider picked
+     *  on a NEW draft (before its session exists) still takes effect on send. */
+    async setActiveProvider(provider: string): Promise<void> {
+        await gooseFetch('/config/upsert', {
+            method: 'POST',
+            body: JSON.stringify({ key: 'active_provider', value: provider, is_secret: false }),
+        });
+    }
+
     /** Select a goose provider for a running session (goosed update_provider). */
     async setSessionProvider(sessionId: string, provider: string): Promise<void> {
         await gooseFetch('/agent/update_provider', {
