@@ -38,8 +38,14 @@ recorded evidence.
 2. Goose live confirmation flow — the ASK+REPLY serde bugs are FIXED this
    session (permission ASK arrives as MessageContent::ActionRequired, REPLY
    needs camelCase sessionId; both corrected + [VERIFIED-CODE] vs goose source
-   + unit-locked). A live card witness still needs a tool-invoking goose turn
-   that goosed gates for confirmation.
+   + unit-locked). EMPIRICALLY TESTED 2026-07-04: a tool-invoking prompt ("use
+   the shell tool to run echo…") under goose_mode=approve produced ZERO
+   actionRequired frames — cursor-agent (the working provider) executes tools
+   in its OWN agent loop and does not route through goose's native
+   tool-confirmation (it streamed "Running the command now. `hello-from-goose`").
+   So the live card needs a NATIVE-tool-calling goose provider (anthropic/etc.),
+   which is keychain-gated on the unsigned dev build. Not a code defect —
+   provider-architecture + env bound.
 3. R7 P2 gradient check — CLOSED by construction: the gradient is theme-derived
    (color-mix on each theme's primary.base, cssGenerator.ts:77), so it adapts to
    every theme incl. custom without a per-theme visual pass. [VERIFIED-CODE]
