@@ -6,6 +6,10 @@
 > (all 6 Epistemos overlay suites + the complete donor suite together). No
 > regression across ~30 overlay commits. The §8 gate is satisfied at the code
 > level; the tail is owner decisions (placement, keychain allow, sign-off).
+> **NATIVE gate also GREEN:** the full Epistemos Pro app builds clean
+> (`BUILD SUCCEEDED`, isolated DerivedData, all ProAgent files + goose work
+> integrated). Both sides of the §8 shipping gate — web (619 tests) and
+> native (full app compile) — are verified.
 
 The shipping gate. States: **GREEN** (built + verified), **BUILT** (code landed,
 verification pending), **PARTIAL**, **OPEN**. No row is marked GREEN without
