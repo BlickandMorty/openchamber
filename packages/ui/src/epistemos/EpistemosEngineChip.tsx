@@ -62,7 +62,7 @@ export const EpistemosEngineChip: React.FC<{ visible: boolean }> = ({ visible })
             <span
                 aria-hidden="true"
                 className="inline-block h-1.5 w-1.5 rounded-full"
-                style={{ backgroundColor: engine === 'goose' ? 'var(--status-warning, #d97706)' : 'var(--primary)' }}
+                style={{ backgroundColor: engine === 'goose' ? 'var(--status-warning)' : 'var(--primary)' }}
             />
             {engine === 'goose' ? 'goose' : 'opencode'}
         </button>
