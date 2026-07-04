@@ -154,6 +154,16 @@ export const registerOpenCodeRoutes = (app, dependencies) => {
   });
 
   app.post('/api/opencode/upgrade', async (req, res) => {
+    // EPISTEMOS(PATCH_LEDGER#R2e): the embedded build pins the engine as a
+    // matched triple (OpenChamber SHA + SDK + opencode binary) — never
+    // self-upgrade. The attach topology bypasses the bundled-binary detection
+    // below, so gate explicitly.
+    if (process.env.EPISTEMOS_EMBED === '1') {
+      return res.status(409).json({
+        success: false,
+        error: 'OpenCode is managed by the app bundle and cannot be upgraded separately.',
+      });
+    }
     try {
       if (await isBundledOpenCodeBinaryActive()) {
         return res.status(409).json({
@@ -205,6 +215,16 @@ export const registerOpenCodeRoutes = (app, dependencies) => {
   });
 
   app.get('/api/opencode/upgrade-status', async (_req, res) => {
+    // EPISTEMOS(PATCH_LEDGER#R2e): see /api/opencode/upgrade — no update
+    // affordance in the embedded build (kills the OpenCode-update toast).
+    if (process.env.EPISTEMOS_EMBED === '1') {
+      return res.json({
+        available: false,
+        currentVersion: null,
+        latestVersion: null,
+        source: 'embedded',
+      });
+    }
     try {
       if (await isBundledOpenCodeBinaryActive()) {
         const current = await readOpenCodeCurrentVersion().catch(() => ({ ok: false, currentVersion: null }));
