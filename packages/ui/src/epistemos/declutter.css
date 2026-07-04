@@ -1,0 +1,24 @@
+/* EPISTEMOS overlay — PATCH_LEDGER#PRO-DECLUTTER-1 (Pro agent surface).
+   Owner 2026-07-04 declutter pass, item: flat/borderless. Nativeness doctrine
+   (EPISTEMOS_NATIVENESS_DOCTRINE_2026_06_29): surfaces are FLAT + BORDERLESS —
+   differentiate by subtle tint + spacing + soft shadow, NOT hard 1px rules.
+
+   The layout region dividers (the border-t/b/l/r border-border/40|50 rules that
+   box the header / content / panel regions) read as demoish hard boxes. Soften
+   them to a fainter tint so the surface calms down while regions stay separated
+   (the faint edge + the bg tint difference remain). Theme-aware (derives from
+   --border via oklab color-mix, adapts to every palette).
+
+   SCOPE: only chrome regions (`bg-background`) — buttons, inputs, cards, chips
+   and popovers use `bg-elevated`/`surface-elevated` and are DELIBERATELY left
+   alone (their soft border is doctrine-correct: differentiate an input by an
+   elevated tint + border, not a hard region rule). No feature removed; nothing
+   less reachable. Reversible via the @import in index.css. */
+
+.bg-background.border-t,
+.bg-background.border-b,
+.bg-background.border-l,
+.bg-background.border-r {
+    /* was --border @ 40–50%; calm to ~24% — present but no longer a hard rule. */
+    border-color: color-mix(in oklab, var(--border) 24%, transparent) !important;
+}
