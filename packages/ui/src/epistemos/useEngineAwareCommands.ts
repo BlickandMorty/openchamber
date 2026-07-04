@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { useCommandsStore } from '@/stores/useCommandsStore';
 import { useSessionUIStore } from '@/sync/session-ui-store';
-import { engineForSession } from '@/epistemos/engineDispatch';
+import { engineForSession, getNextSessionEngine } from '@/epistemos/engineDispatch';
 
 // EPISTEMOS overlay (Plan 1-PRO §0.6 capability truth / §3 / §8-P3): goose has
 // NO slash commands (the adapter's sendCommand rejects them). Per the LOCKED
@@ -22,7 +22,14 @@ export const gateCommandsForEngine = <T>(commands: T[], isGooseSession: boolean)
 export const useEngineAwareCommands = () => {
     const commands = useCommandsStore((s) => s.commands);
     const currentSessionId = useSessionUIStore((s) => s.currentSessionId);
-    const isGoose = currentSessionId ? engineForSession(currentSessionId) === 'goose' : false;
+    // Existing session → its engine. NEW draft (currentSessionId null, e.g. the
+    // "new chat" composer) → the chip's next-session intent, so a goose draft
+    // ALSO hides commands before its session exists. The intent is read at
+    // render time; typing "/" re-renders the composer, so the menu reflects the
+    // current chip selection when it would appear.
+    const isGoose = currentSessionId
+        ? engineForSession(currentSessionId) === 'goose'
+        : getNextSessionEngine() === 'goose';
     return useMemo(
         () => gateCommandsForEngine(commands, isGoose) as typeof commands,
         [isGoose, commands],
