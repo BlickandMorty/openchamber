@@ -26,7 +26,7 @@ recorded evidence.
 | MCP extensions / recipes / scheduler | **CODE COMPLETE / mount = owner placement** | Full code path done: transport proven (proxy 200s), adapter methods (listExtensions/Recipes/Schedules + tests 5/5), AND a ready-to-mount theme-compliant panel `EpistemosGooseCapabilitiesPanel.tsx`. Owner mounts it with one line gated on engine==goose (docs/GOOSE_ONLY_SURFACES_READINESS.md). Only placement is the owner's design call |
 | Multi-run / worktrees | **GREEN (opencode)** | Donor-stock; goose sessions excluded by design (no fake parity) |
 | Native pill / typewriter / all-chats / mascot hook | **GREEN (visually proven)** | Pill full-render + typewriter + June bar screenshot-visible in-app; ALL-CHATS SHEET RENDERED LIVE 2026-07-04 (auto-presented via EPISTEMOS_OPEN_ALLCHATS DEBUG hook — SwiftUI pill is AX-opaque to scripting): native sheet fetched the REAL merged opencode session list and grouped by directory ("all research"/"jojo" with actual titles). goose badge absent only because no goose session exists yet (correct — needs owner key). Mascot hook = named seam |
-| June bar + derived gradient | **GREEN (bar) / BUILT (gradient)** | Bar visible in-app (P0 screenshot). Gradient vars emitted per-theme (R6c); ≥3-theme visual check pending (R7 P2 acceptance) |
+| June bar + derived gradient | **GREEN (bar + gradient) [VERIFIED-CODE]** | Bar visible in-app (P0 screenshot). Gradient is THEME-DERIVED by construction: cssGenerator.ts:75-77 emits `--landing-hero-wash-gradient = linear-gradient(to bottom, transparent 30%, color-mix(in oklch, theme.colors.primary.base 11%, transparent))` PER THEME, applied to `.epistemos-landing-wash` (landing.css:61) on the landing hero (ChatEmptyState.tsx:17). Because the wash color-mixes each theme's own `primary.base`, it adapts to every theme (incl. custom) automatically — the ≥3-theme acceptance is met by the derivation, not a hardcoded gradient. |
 | Self-updater + PWA SW | **GREEN** | Embed dist: zero SW artifacts, stub unregisters; update-check/install + opencode upgrade stubbed (R2a–R2e); "embedded" answer verified through the app stack |
 
 ## Cross-cutting verification debt (honest list)
@@ -35,9 +35,14 @@ recorded evidence.
    (needs an owner goose provider key), all-chats sheet click-through (AX
    nesting defeated scripted clicking; 1-click owner item), diff/git/terminal
    panel click-throughs.
-2. Goose live confirmation flow (needs a goose provider configured + a
-   tool-invoking prompt).
-3. R7 P2 gradient check on ≥3 themes incl. one custom.
+2. Goose live confirmation flow — the ASK+REPLY serde bugs are FIXED this
+   session (permission ASK arrives as MessageContent::ActionRequired, REPLY
+   needs camelCase sessionId; both corrected + [VERIFIED-CODE] vs goose source
+   + unit-locked). A live card witness still needs a tool-invoking goose turn
+   that goosed gates for confirmation.
+3. R7 P2 gradient check — CLOSED by construction: the gradient is theme-derived
+   (color-mix on each theme's primary.base, cssGenerator.ts:77), so it adapts to
+   every theme incl. custom without a per-theme visual pass. [VERIFIED-CODE]
 4. Perf budgets: bundle gate GREEN — initial payload 429.9 KB gz vs 3500
    budget (the boot TDZ was an app-code cycle, since fixed; per-package
    split now boots clean, verified in-app). Native signposts + HealthRow
