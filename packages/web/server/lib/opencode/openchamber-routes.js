@@ -17,6 +17,16 @@ export const registerOpenChamberRoutes = (app, dependencies) => {
   let cachedModelsMetadataTimestamp = 0;
 
   app.get('/api/openchamber/update-check', async (req, res) => {
+    // EPISTEMOS(PATCH_LEDGER#R2d): in the embedded build the server always answers
+    // "no update" — covers every client caller (useUpdateStore, UpdateDialog, Header).
+    if (process.env.EPISTEMOS_EMBED === '1') {
+      const embedVersion =
+        typeof req.query.currentVersion === 'string' && req.query.currentVersion.trim().length > 0
+          ? req.query.currentVersion.trim()
+          : 'embedded';
+      res.json({ available: false, currentVersion: embedVersion, nextSuggestedCheckInSec: 86400 });
+      return;
+    }
     try {
       const { checkForUpdates } = await import('../package-manager.js');
       const parseString = (value) => (typeof value === 'string' && value.trim().length > 0 ? value.trim() : undefined);
@@ -55,6 +65,12 @@ export const registerOpenChamberRoutes = (app, dependencies) => {
   });
 
   app.post('/api/openchamber/update-install', async (_req, res) => {
+    // EPISTEMOS(PATCH_LEDGER#R2d): self-update spawns a package-manager process —
+    // never allowed inside the supervised embedded server.
+    if (process.env.EPISTEMOS_EMBED === '1') {
+      res.status(400).json({ error: 'Self-update is disabled in the embedded build' });
+      return;
+    }
     try {
       const { spawn: spawnChild } = await import('child_process');
       const {

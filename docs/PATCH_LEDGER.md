@@ -1,0 +1,27 @@
+# Epistemos Patch Ledger
+
+Every **in-place edit** to upstream OpenChamber files in this vendored fork gets a row
+here. Epistemos-owned NEW files live under `packages/ui/src/epistemos/`,
+`packages/web/src/epistemos/`, and `packages/web/server/lib/goose/` and do NOT need
+rows (they can never conflict with upstream). On every upstream merge, walk this table
+and re-verify each hunk survived.
+
+Vendor base: cloned upstream `74167285` (v1.13.9-6, 2026-07-03).
+Build flavor switch: `VITE_EPISTEMOS_EMBED=1` (build time) + `EPISTEMOS_EMBED=1`
+(server runtime, set by the Swift supervisor). Without them the fork builds/behaves
+stock-upstream.
+
+| ID | File | Hunk | Why |
+|---|---|---|---|
+| R2a | `packages/web/vite.config.ts` | `epistemosEmbed` const + `VitePWA` plugin wrapped in `...(epistemosEmbed ? [] : [VitePWA({...})])` | Embed build must emit ZERO service workers (stale-SW vs vendored bundle trap) |
+| R2b | `packages/web/vite.config.ts` | conditional alias `virtual:pwa-register` → `src/epistemos/pwaRegisterStub.ts` | With the plugin dropped the virtual module no longer resolves; stub also actively unregisters stale SWs. Keeps `main.tsx` byte-identical to upstream |
+| R2c | `packages/ui/src/stores/useUpdateStore.ts` | early-return in `checkForUpdates` when `VITE_EPISTEMOS_EMBED === '1'` | No in-app self-update; update path is upstream merge + app release |
+| R2d | `packages/web/server/lib/opencode/openchamber-routes.js` | `/api/openchamber/update-check` answers `{available:false}` and `/api/openchamber/update-install` answers 400 when `EPISTEMOS_EMBED === '1'` | Server-side choke point: covers ALL client callers (useUpdateStore, UpdateDialog.tsx:163, Header.tsx:942 — the latter two were added upstream after the research base) and blocks the package-manager spawn |
+
+## Reserved upcoming rows (Plan 1 §6/R6)
+
+| ID | File | Planned hunk |
+|---|---|---|
+| R6a | `packages/ui/src/lib/opencode/client.ts` | engine-dispatch injection point (goose adapter behind the SDK-shaped seam) |
+| R6b | `packages/ui/src/sync/event-pipeline.ts` | goose event translation entry (only if the adapter cannot stay fully outside) |
+| R6c | `packages/ui/src/lib/theme/cssGenerator.ts` | emit `--landing-hero-wash` June gradient vars for every theme |

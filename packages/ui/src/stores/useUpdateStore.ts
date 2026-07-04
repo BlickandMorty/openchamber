@@ -160,6 +160,9 @@ export const useUpdateStore = create<UpdateStore>()((set, get) => ({
   ...initialState,
 
   checkForUpdates: async () => {
+    // EPISTEMOS(PATCH_LEDGER#R2c): the embedded build never self-updates — updates
+    // ship as upstream merge + app release. State stays at "no update available".
+    if (import.meta.env.VITE_EPISTEMOS_EMBED === '1') return null;
     const runtime = detectRuntimeType();
     if (!runtime) return null;
 

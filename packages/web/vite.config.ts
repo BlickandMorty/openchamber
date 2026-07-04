@@ -9,6 +9,10 @@ import { themeStoragePlugin } from '../../vite-theme-plugin';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const packageJson = JSON.parse(readFileSync(path.resolve(__dirname, 'package.json'), 'utf-8'));
 const pwaDevEnabled = process.env.OPENCHAMBER_DISABLE_PWA_DEV !== '1';
+// EPISTEMOS(PATCH_LEDGER#R2a): the embedded WKWebView build must ship ZERO service
+// workers — a cached SW fighting a vendored bundle is the stale-bundle trap. Building
+// with VITE_EPISTEMOS_EMBED=1 drops the PWA plugin and stubs 'virtual:pwa-register'.
+const epistemosEmbed = process.env.VITE_EPISTEMOS_EMBED === '1';
 const reactScanToggle = (process.env.VITE_ENABLE_REACT_SCAN ?? '').toLowerCase();
 const enableReactScan = reactScanToggle === '1' || reactScanToggle === 'true' || reactScanToggle === 'on' || reactScanToggle === 'yes';
 
@@ -39,7 +43,7 @@ export default defineConfig({
       },
     },
     themeStoragePlugin(),
-    VitePWA({
+    ...(epistemosEmbed ? [] : [VitePWA({
       strategies: 'injectManifest',
       srcDir: 'src',
       filename: 'sw.ts',
@@ -57,10 +61,15 @@ export default defineConfig({
         enabled: pwaDevEnabled,
         type: 'module',
       },
-    }),
+    })]),
   ],
   resolve: {
     alias: [
+      // EPISTEMOS(PATCH_LEDGER#R2b): with the PWA plugin dropped, 'virtual:pwa-register'
+      // no longer resolves; point it at a stub that also unregisters stale SWs.
+      ...(epistemosEmbed
+        ? [{ find: 'virtual:pwa-register', replacement: path.resolve(__dirname, 'src/epistemos/pwaRegisterStub.ts') }]
+        : []),
       { find: '@opencode-ai/sdk/v2', replacement: path.resolve(__dirname, '../../node_modules/@opencode-ai/sdk/dist/v2/client.js') },
       { find: '@openchamber/ui', replacement: path.resolve(__dirname, '../ui/src') },
       { find: '@web', replacement: path.resolve(__dirname, './src') },
