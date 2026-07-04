@@ -11,10 +11,15 @@ const directive = (name: string): string => {
 };
 
 describe('embed CSP (no external hosts)', () => {
-    it('default-src and connect-src are self-only', () => {
+    it('default-src is self-only; connect-src is self + inert data: (no external host)', () => {
         expect(directive('default-src')).toBe("default-src 'self'");
         // connect-src governs fetch/XHR/SSE/WebSocket — the exfiltration lens.
-        expect(directive('connect-src')).toBe("connect-src 'self'");
+        // 'self' + data: only: data: is inline/self-contained (the terminal's
+        // ghostty-web WASM is fetched as a data: URL) and has NO network egress,
+        // so it cannot exfiltrate to a remote host. The anti-exfil guarantee is
+        // the ABSENCE of a bare ws:/https: source (asserted below), not the
+        // absence of data:.
+        expect(directive('connect-src')).toBe("connect-src 'self' data:");
     });
 
     it('never contains a wildcard or a bare external scheme', () => {

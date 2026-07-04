@@ -8,9 +8,13 @@
 // The policy is tuned to what THIS SPA needs and NOTHING external:
 //  - script/style 'unsafe-inline' + 'unsafe-eval' — Vite/React inline + libs
 //    that use new Function; this is about XSS hardening, not the exfil vector.
-//  - connect-src 'self' — same-origin REST + SSE + the PTY WebSocket. NO bare
-//    `ws:`/`https:` scheme (that would re-allow external hosts); 'self' covers
-//    the same-origin ws:// in WebKit. THIS is the anti-exfiltration guarantee.
+//  - connect-src 'self' data: — same-origin REST + SSE + the PTY WebSocket, PLUS
+//    `data:` for the terminal's ghostty-web WASM (`fetch('data:...wasm')` +
+//    WebAssembly.compile). `data:` is INLINE (self-contained, no network egress),
+//    so it is NOT an exfiltration vector — the anti-exfil guarantee is about bare
+//    `ws:`/`https:` to REMOTE hosts, which stays forbidden; 'self' still covers
+//    the same-origin ws:// in WebKit. Without `data:` here the terminal's WASM
+//    load is CSP-blocked and the terminal never initializes.
 //  - img/font/media data: + blob: (icons, generated assets); worker blob:.
 //  - object/base/frame locked down.
 const EMBED_CSP = [
@@ -20,7 +24,7 @@ const EMBED_CSP = [
   "img-src 'self' data: blob:",
   "font-src 'self' data:",
   "media-src 'self' data: blob:",
-  "connect-src 'self'",
+  "connect-src 'self' data:",
   "worker-src 'self' blob:",
   "child-src 'self' blob:",
   "object-src 'none'",
