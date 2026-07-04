@@ -84,15 +84,16 @@ export const getNextSessionEngine = (): EngineKind => {
 };
 
 const consumeNextSessionEngine = (): EngineKind => {
-    const engine = getNextSessionEngine();
-    // Reset the intent SILENTLY (no notify): this runs DURING goose session
-    // creation (createSession route). Notifying here would flip the bar to
-    // opencode for a frame before currentSessionId/draftOpen update it to the
-    // new goose session — a visible flash. The bar re-renders from that session-
-    // state change instead; the reset only governs the NEXT draft.
-    nextSessionEngine = 'opencode';
-    nextSessionEngineSetAt = 0;
-    return engine;
+    // READ the intent WITHOUT resetting it. This runs DURING goose session
+    // creation (createSession route) while the draft is still open; resetting to
+    // opencode here made the reactive resolver return opencode on ANY re-render
+    // in the creation window (the send's optimistic message re-renders the
+    // footer) — a visible flash on every goose send. The stale-intent case is
+    // already guarded by the 10-min TTL AND the chip's draft-close reset
+    // (setNextSessionEngine('opencode') on !visible) — both authoritative — so
+    // no reset is needed here, and a retried createSession for the same draft
+    // still routes goose.
+    return getNextSessionEngine();
 };
 
 /**
