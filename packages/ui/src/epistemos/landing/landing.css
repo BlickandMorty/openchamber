@@ -46,6 +46,15 @@
   }
 }
 
+/* Hero variant: the new-session draft headline — inherits the h1's size and
+   color so the pixel font rides the donor's responsive type scale. */
+.epistemos-typewriter.epistemos-typewriter-hero {
+  font-size: inherit;
+  color: inherit;
+  letter-spacing: 0.01em;
+  justify-content: center;
+}
+
 /* June's new-session hero wash: the theme-derived gradient pooling at the
    bottom of the landing (vars emitted per-theme by cssGenerator, ledger R6c). */
 .epistemos-landing-wash {

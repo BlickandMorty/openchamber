@@ -4,6 +4,8 @@ import type { PermissionRequest } from '@/types/permission';
 import type { QuestionRequest } from '@/types/question';
 
 import { ChatInput } from './ChatInput';
+// EPISTEMOS(PATCH_LEDGER#P2d): landing headline typewriter.
+import { EpistemosTypewriterGreeting } from '@/epistemos/landing/EpistemosTypewriterGreeting';
 import { DraftPresetChips } from './DraftPresetChips';
 import { useInputStore } from '@/sync/input-store';
 import { useUIStore } from '@/stores/useUIStore';
@@ -352,20 +354,6 @@ const ReadOnlyPromptBanner: React.FC = () => {
 const getProjectDisplayLabel = (project: { label?: string; path: string }): string => {
     const label = project.label?.trim();
     return label || formatDirectoryName(project.path);
-};
-
-const renderDraftTitle = (title: string, projectLabel: string | null): React.ReactNode => {
-    if (!projectLabel) return title;
-    const projectIndex = title.indexOf(projectLabel);
-    if (projectIndex === -1) return title;
-
-    return (
-        <>
-            {title.slice(0, projectIndex)}
-            <span className="font-medium">{projectLabel}</span>
-            {title.slice(projectIndex + projectLabel.length)}
-        </>
-    );
 };
 
 type ChatContainerProps = {
@@ -801,12 +789,15 @@ export const ChatContainer: React.FC<ChatContainerProps> = ({ autoOpenDraft = tr
 				{useCompactDraftLayout && !isDesktopExpandedInput ? (
 					<div className="flex min-h-0 flex-1 flex-col items-center justify-center px-6 text-center">
 						<h1 className="text-balance text-3xl font-normal tracking-tight text-foreground">
-							{renderDraftTitle(
-								draftProjectLabel
-									? t('chat.emptyState.draftTitleWithProject', { project: draftProjectLabel })
-									: t('chat.emptyState.draftTitle'),
-								draftProjectLabel,
-							)}
+							{/* EPISTEMOS(PATCH_LEDGER#P2d): RetroGaming typewriter headline. */}
+							<EpistemosTypewriterGreeting
+								className="epistemos-typewriter-hero"
+								text={
+									draftProjectLabel
+										? t('chat.emptyState.draftTitleWithProject', { project: draftProjectLabel })
+										: t('chat.emptyState.draftTitle')
+								}
+							/>
 						</h1>
 						<DraftPresetChips
 							onSubmit={(text) => useInputStore.getState().requestPresetSubmit(text)}

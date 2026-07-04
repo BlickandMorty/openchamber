@@ -1,4 +1,6 @@
 import React from 'react';
+// EPISTEMOS(PATCH_LEDGER#P2d): landing headline typewriter.
+import { EpistemosTypewriterGreeting } from '@/epistemos/landing/EpistemosTypewriterGreeting';
 import { Textarea } from '@/components/ui/textarea';
 import { ComposerDictation } from '@/components/dictation/ComposerDictation';
 // sessionStore removed — currentSessionId comes from useSessionUIStore
@@ -357,20 +359,6 @@ const getProjectDisplayLabel = (project: { label?: string; path: string }): stri
         return label;
     }
     return formatDirectoryName(project.path);
-};
-
-const renderDraftTitle = (title: string, projectLabel: string | null): React.ReactNode => {
-    if (!projectLabel) return title;
-    const projectIndex = title.indexOf(projectLabel);
-    if (projectIndex === -1) return title;
-
-    return (
-        <>
-            {title.slice(0, projectIndex)}
-            <span className="font-medium">{projectLabel}</span>
-            {title.slice(projectIndex + projectLabel.length)}
-        </>
-    );
 };
 
 const getProjectIconColor = (projectColor?: string | null): string | undefined => {
@@ -4051,12 +4039,16 @@ const ChatInputComponent: React.FC<ChatInputProps> = ({ onOpenSettings, scrollTo
             {newSessionDraftOpen && !isDesktopExpanded && !isMobile && !isVSCode && !isMiniChatSurface ? (
                 <div className="chat-input-column mb-7 text-center">
                     <h1 className="text-balance text-2xl font-normal tracking-tight text-foreground md:text-3xl">
-                        {renderDraftTitle(
-                            draftProjectLabel
-                                ? t('chat.emptyState.draftTitleWithProject', { project: draftProjectLabel })
-                                : t('chat.emptyState.draftTitle'),
-                            draftProjectLabel,
-                        )}
+                        {/* EPISTEMOS(PATCH_LEDGER#P2d): RetroGaming typewriter headline —
+                            same localized string, signature font + effect only. */}
+                        <EpistemosTypewriterGreeting
+                            className="epistemos-typewriter-hero"
+                            text={
+                                draftProjectLabel
+                                    ? t('chat.emptyState.draftTitleWithProject', { project: draftProjectLabel })
+                                    : t('chat.emptyState.draftTitle')
+                            }
+                        />
                     </h1>
                 </div>
             ) : null}

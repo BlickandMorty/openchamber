@@ -11,7 +11,7 @@ const prefersReducedMotion = (): boolean =>
     typeof window.matchMedia === 'function' &&
     window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-export const EpistemosTypewriterGreeting: React.FC<{ text: string }> = ({ text }) => {
+export const EpistemosTypewriterGreeting: React.FC<{ text: string; className?: string }> = ({ text, className }) => {
     const [visibleCount, setVisibleCount] = useState(() => (prefersReducedMotion() ? text.length : 0));
 
     useEffect(() => {
@@ -32,7 +32,7 @@ export const EpistemosTypewriterGreeting: React.FC<{ text: string }> = ({ text }
     }, [text]);
 
     return (
-        <span className="epistemos-typewriter" aria-label={text}>
+        <span className={className ? `epistemos-typewriter ${className}` : 'epistemos-typewriter'} aria-label={text}>
             <span aria-hidden="true">{text.slice(0, Math.min(visibleCount, text.length))}</span>
             <span className="epistemos-typewriter-caret" aria-hidden="true" />
         </span>
