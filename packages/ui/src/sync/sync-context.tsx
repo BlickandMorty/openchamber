@@ -6,6 +6,8 @@ import type { StoreApi } from "zustand"
 import { useStore } from "zustand"
 import type { OpencodeClient } from "@opencode-ai/sdk/v2/client"
 import { createEventPipeline } from "./event-pipeline"
+// EPISTEMOS(PATCH_LEDGER#R6b): goose adapter synthetic-event ingest.
+import { registerGooseEventIngest } from "@/epistemos/gooseEventBridge"
 import { isVSCodeRuntime } from "@/lib/desktop"
 import { isMobileSurfaceRuntime } from "@/lib/runtimeSurface"
 import { reduceGlobalEvent, applyGlobalProject, applyDirectoryEvent, type SessionMaterializationReason } from "./event-reducer"
@@ -1951,7 +1953,13 @@ export function SyncProvider(props: {
       },
     })
     pipelineReconnectRef.current = pipeline.reconnect
+    // EPISTEMOS(PATCH_LEDGER#R6b): goose adapter events ride the SAME ingest as
+    // opencode payloads (synthetic Event shapes the pipeline already normalizes).
+    const unregisterGooseIngest = registerGooseEventIngest((directory, payload) => {
+      handleEvent(directory, payload, childStores, routingIndex)
+    })
     return () => {
+      unregisterGooseIngest()
       if (pipelineReconnectRef.current === pipeline.reconnect) {
         pipelineReconnectRef.current = null
       }

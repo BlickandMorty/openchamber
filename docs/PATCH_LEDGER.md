@@ -32,3 +32,4 @@ stock-upstream.
 |---|---|---|
 | R6a | `packages/ui/src/lib/opencode/client.ts` | engine-dispatch injection point (goose adapter behind the SDK-shaped seam) |
 | R6b | `packages/ui/src/sync/event-pipeline.ts` | goose event translation entry (only if the adapter cannot stay fully outside) |
+| R6b | `packages/ui/src/sync/sync-context.tsx` | import + `registerGooseEventIngest(...)` beside pipeline creation, unregister in the effect cleanup | goose adapter synthetic events (message.part.delta/updated, session.idle) enter `handleEvent` — the exact ingest opencode payloads use — skipping only stream-watchdog bookkeeping (synthetic ≠ transport activity) |
