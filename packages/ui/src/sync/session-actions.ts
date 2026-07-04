@@ -10,6 +10,12 @@ import { useInputStore } from "./input-store"
 import type { ChildStoreManager } from "./child-store"
 import { computeSubtreeIds } from "./scoped-blocking-requests"
 import { opencodeClient } from "@/lib/opencode/client"
+// EPISTEMOS(PATCH_LEDGER#R6e): goose permission shim (replies bypass the
+// client-singleton dispatch — they use the raw SDK reply client).
+import { engineForSession } from "@/epistemos/engineDispatch"
+import { gooseEngineClient } from "@/epistemos/gooseClient"
+import { emitGooseEvent } from "@/epistemos/gooseEventBridge"
+import { goosePermissionRepliedEvent } from "@/epistemos/gooseSdkMapping"
 import { mergeSessionDirectoryMetadata, useGlobalSessionsStore } from "@/stores/useGlobalSessionsStore"
 import { useConfigStore } from "@/stores/useConfigStore"
 import { registerSessionDirectory } from "./sync-refs"
@@ -737,6 +743,16 @@ export async function respondToPermission(
   requestId: string,
   response: "once" | "always" | "reject",
 ): Promise<void> {
+  // EPISTEMOS(PATCH_LEDGER#R6e): goose sessions reply through the adapter —
+  // POST /goose/action-required/tool-confirmation with snake_case actions
+  // (§3 corrected payload; principal_type defaults to Tool server-side).
+  if (engineForSession(sessionId) === "goose") {
+    const action = response === "once" ? "allow_once" : response === "always" ? "always_allow" : "deny_once"
+    await gooseEngineClient.confirmToolAction(sessionId, requestId, action)
+    const directory = getSessionDirectory(sessionId) || ""
+    emitGooseEvent(directory, goosePermissionRepliedEvent(sessionId, requestId, response))
+    return
+  }
   await waitForConnectionOrThrow()
   const directory = resolveDirectoryForBlockingRequest("permission", sessionId, requestId)
     || getSessionDirectory(sessionId)
@@ -755,6 +771,13 @@ export async function dismissPermission(
   sessionId: string,
   requestId: string,
 ): Promise<void> {
+  // EPISTEMOS(PATCH_LEDGER#R6e): see respondToPermission.
+  if (engineForSession(sessionId) === "goose") {
+    await gooseEngineClient.confirmToolAction(sessionId, requestId, "deny_once")
+    const directory = getSessionDirectory(sessionId) || ""
+    emitGooseEvent(directory, goosePermissionRepliedEvent(sessionId, requestId, "reject"))
+    return
+  }
   await waitForConnectionOrThrow()
   const directory = resolveDirectoryForBlockingRequest("permission", sessionId, requestId)
     || getSessionDirectory(sessionId)

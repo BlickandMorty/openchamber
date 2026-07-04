@@ -14,6 +14,7 @@ import {
     gooseMessageUpdatedEvent,
     goosePartDeltaEvent,
     goosePartUpdatedEvent,
+    goosePermissionAskedEvent,
     gooseSessionIdleEvent,
     gooseSessionToSdkSession,
     gooseTextPart,
@@ -171,10 +172,36 @@ const gooseRoutes: Record<string, GooseRoute> = {
         }
 
         const seenAssistantIds = new Set<string>();
+        const seenConfirmationIds = new Set<string>();
         const latestTextByMessage = new Map<string, string>();
 
         gooseEngineClient.prompt(sessionId, userText, {
             onMessage: (message) => {
+                // Permission shim (§3): tool-confirmation requests ride the
+                // conversation as content items tagged toolConfirmationRequest
+                // (goose MessageContent, serde tag "type"/camelCase). Surface
+                // each once through the donor's permission.asked path.
+                if (Array.isArray(message.content)) {
+                    for (const item of message.content) {
+                        if (!item || item.type !== 'toolConfirmationRequest') continue;
+                        const confirmationId = typeof item.id === 'string' ? item.id : null;
+                        if (!confirmationId || seenConfirmationIds.has(confirmationId)) continue;
+                        seenConfirmationIds.add(confirmationId);
+                        emitGooseEvent(
+                            directory,
+                            goosePermissionAskedEvent(sessionId, {
+                                id: confirmationId,
+                                toolName: typeof (item as { toolName?: unknown }).toolName === 'string'
+                                    ? ((item as { toolName: string }).toolName)
+                                    : undefined,
+                                arguments: (item as { arguments?: unknown }).arguments,
+                                prompt: typeof (item as { prompt?: unknown }).prompt === 'string'
+                                    ? ((item as { prompt: string }).prompt)
+                                    : null,
+                            }),
+                        );
+                    }
+                }
                 if (message.role !== 'assistant') return;
                 const messageId =
                     typeof message.id === 'string' && message.id.length > 0
@@ -220,6 +247,31 @@ const gooseRoutes: Record<string, GooseRoute> = {
 
         return Promise.resolve(userMessageId);
     },
+    // Capability truth (§0.6): features goose lacks answer honestly instead of
+    // sending goose ids to opencode (which would 404 confusingly).
+    getSessionTodos: (args, passthrough) => {
+        const sessionId = firstArgSessionId(args);
+        if (!sessionId || engineForSession(sessionId) !== 'goose') return passthrough();
+        return Promise.resolve([]);
+    },
+    sendCommand: (args, passthrough) => gooseUnsupported(args, passthrough, 'commands'),
+    revertSession: (args, passthrough) => gooseUnsupported(args, passthrough, 'revert'),
+    unrevertSession: (args, passthrough) => gooseUnsupported(args, passthrough, 'revert'),
+    summarizeSession: (args, passthrough) => gooseUnsupported(args, passthrough, 'summarize'),
+    shellSession: (args, passthrough) => gooseUnsupported(args, passthrough, 'shell mode'),
+};
+
+const gooseUnsupported = (args: unknown[], passthrough: () => unknown, feature: string): unknown => {
+    const sessionId = (() => {
+        const first = args[0];
+        if (typeof first === 'string') return first;
+        if (first && typeof first === 'object' && typeof (first as { id?: unknown }).id === 'string') {
+            return (first as { id: string }).id;
+        }
+        return null;
+    })();
+    if (!sessionId || engineForSession(sessionId) !== 'goose') return passthrough();
+    return Promise.reject(new Error(`The goose engine does not support ${feature}.`));
 };
 
 export const wrapWithEngineDispatch = <T extends object>(service: T): T => {

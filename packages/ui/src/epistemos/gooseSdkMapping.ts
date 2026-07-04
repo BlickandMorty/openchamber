@@ -188,3 +188,34 @@ export const gooseSessionUpdatedEvent = (sessionId: string, info: Session): Even
     type: 'session.updated',
     properties: { sessionID: sessionId, info },
 });
+
+/** goosed toolConfirmationRequest -> the donor's permission.asked shape. */
+export const goosePermissionAskedEvent = (
+    sessionId: string,
+    confirmation: { id: string; toolName?: string; arguments?: unknown; prompt?: string | null },
+): Event => ({
+    id: syntheticEventId(),
+    type: 'permission.asked',
+    properties: {
+        id: confirmation.id,
+        sessionID: sessionId,
+        permission: confirmation.toolName || 'tool',
+        patterns: [],
+        metadata: {
+            epistemosEngine: GOOSE_ENGINE_TAG,
+            ...(confirmation.prompt ? { prompt: confirmation.prompt } : {}),
+            ...(confirmation.arguments !== undefined ? { arguments: confirmation.arguments } : {}),
+        },
+        always: [],
+    },
+});
+
+export const goosePermissionRepliedEvent = (
+    sessionId: string,
+    requestId: string,
+    reply: 'once' | 'always' | 'reject',
+): Event => ({
+    id: syntheticEventId(),
+    type: 'permission.replied',
+    properties: { sessionID: sessionId, requestID: requestId, reply },
+});

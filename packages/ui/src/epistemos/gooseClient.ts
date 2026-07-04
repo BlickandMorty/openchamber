@@ -269,6 +269,23 @@ export class GooseEngineClient {
         return gooseJson<unknown>('/config/providers');
     }
 
+    /**
+     * Reply to a tool-confirmation request (§3 corrected payload):
+     * `{id, action, session_id}` — `principal_type` is omitted because goosed
+     * defaults it to Tool server-side. Actions serialize snake_case
+     * (goose-providers/src/permission.rs).
+     */
+    async confirmToolAction(
+        sessionId: string,
+        confirmationId: string,
+        action: 'allow_once' | 'always_allow' | 'deny_once' | 'always_deny' | 'cancel',
+    ): Promise<void> {
+        await gooseFetch('/action-required/tool-confirmation', {
+            method: 'POST',
+            body: JSON.stringify({ id: confirmationId, action, session_id: sessionId }),
+        });
+    }
+
     removeIndexEntry(sessionId: string): void {
         this.index = this.index.filter((entry) => entry.id !== sessionId);
         writeStoredIndex(this.index);
