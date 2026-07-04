@@ -67,6 +67,7 @@ import {
 import { registerOpenChamberRoutes } from './lib/opencode/openchamber-routes.js';
 // EPISTEMOS(PATCH_LEDGER#R6d): same-origin goose engine proxy (inert without env).
 import { registerGooseProxyRoutes } from './lib/goose/proxy.js';
+import { registerEpistemosSecurityHeaders } from './lib/goose/security-headers.js';
 import { createServerUtilsRuntime } from './lib/opencode/server-utils-runtime.js';
 import { createStaticRoutesRuntime } from './lib/opencode/static-routes-runtime.js';
 import { createSettingsRuntime } from './lib/opencode/settings-runtime.js';
@@ -1254,6 +1255,10 @@ async function main(options = {}) {
     setAutoAcceptSession,
   });
   uiAuthController = bootstrapResult.uiAuthController;
+  // EPISTEMOS(PATCH_LEDGER#R6f): no-external-hosts CSP + security headers for
+  // the embedded Pro surface (§14.5). Registered BEFORE the SPA static handler
+  // (mounted later in this bootstrap) so the header rides the HTML response.
+  registerEpistemosSecurityHeaders(app);
   // EPISTEMOS(PATCH_LEDGER#R6d): /goose/* -> goosed with X-Secret-Key attached
   // server-side; registers only when the supervisor exports EPISTEMOS_GOOSE_PORT.
   registerGooseProxyRoutes(app);
