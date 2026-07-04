@@ -38,10 +38,14 @@ export const engineForSession = (sessionId: string | undefined | null): EngineKi
  * Hardening: the intent is a module global, so an unrelated createSession
  * (multi-run, worktree, review) firing between the chip tap and the user's
  * send would otherwise consume a 'goose' intent for the wrong session. Bind it
- * to a short validity window — the user sends within seconds of tapping the
- * chip; a stale intent silently reverts to opencode.
+ * to a validity window that bounds a genuinely-abandoned intent WITHOUT
+ * breaking a real compose: 30s was too short — a user who taps the goose chip
+ * and then spends a minute writing a thoughtful prompt would see the chip on
+ * "goose" but have the turn silently routed to opencode (what-you-see-isn't-
+ * what-you-get). 10 minutes covers any realistic compose; the draft-close
+ * reset (chip -> opencode on !visible) already scopes it to the open draft.
  */
-const NEXT_ENGINE_TTL_MS = 30_000;
+const NEXT_ENGINE_TTL_MS = 600_000;
 let nextSessionEngine: EngineKind = 'opencode';
 let nextSessionEngineSetAt = 0;
 

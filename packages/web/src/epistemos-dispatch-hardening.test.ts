@@ -41,11 +41,15 @@ describe('per-conversation engine intent TTL (#4)', () => {
         expect(getNextSessionEngine()).toBe('goose');
     });
 
-    it('reverts to opencode after the TTL so a stale intent cannot leak', () => {
+    it('keeps a goose intent through a realistic compose, reverts only after the long TTL', () => {
         vi.useFakeTimers();
         setNextSessionEngine('goose');
         expect(getNextSessionEngine()).toBe('goose');
-        vi.advanceTimersByTime(31_000); // > 30s TTL
+        // A minute of composing must NOT silently revert to opencode.
+        vi.advanceTimersByTime(60_000);
+        expect(getNextSessionEngine()).toBe('goose');
+        // A genuinely-abandoned intent still reverts past the 10-min window.
+        vi.advanceTimersByTime(601_000);
         expect(getNextSessionEngine()).toBe('opencode');
     });
 });
