@@ -12,6 +12,7 @@
 /* EPISTEMOS(PATCH_LEDGER#P2b): June bar + landing signature overlays. */
 @import "./epistemos/juneBar.css";
 @import "./epistemos/landing/landing.css";
+@import "./epistemos/sidebarOverlay.css";
 @source "./**/*.{ts,tsx,css}";
 
 /* KaTeX theme overrides for light/dark mode */

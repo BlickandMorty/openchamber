@@ -1,0 +1,62 @@
+/* EPISTEMOS overlay — PATCH_LEDGER#PRO-SIDEBAR-1 (Pro agent surface).
+   Owner 2026-07-04: the left session sidebar must SLIDE IN OVER the content
+   (overlay), not PUSH it — like the old goose sidebar. The main screen must not
+   shift when it opens/closes.
+
+   How, without editing donor core: the donor Sidebar
+   (packages/ui/src/components/layout/Sidebar.tsx) is a flex child whose *width*
+   animates 0↔openWidth — that width in the flow is the push. It also sets
+   aria-hidden to reflect open/closed (Sidebar.tsx:144), and exposes its open
+   width as --oc-left-sidebar-width (Sidebar.tsx:138). We:
+     1. anchor the flex parent (:has) as the positioning context,
+     2. take the <aside> out of flow (absolute) so the flex-1 main content fills
+        the full width and never shifts,
+     3. pin it to the full open width and slide it with translateX keyed off the
+        donor's own aria-hidden — a clean slide, not a width grow.
+   Flat/borderless nativeness doctrine: no hard right rule; soft shadow + a
+   larger theme-token radius (--radius-xl, theme-aware for all palettes).
+   Fully reversible: remove the @import in index.css. Mobile is untouched
+   (donor Sidebar returns null on mobile; the mobile drawers already overlay). */
+
+/* 1. Positioning context: the flex row that directly holds the sidebar aside. */
+div:has(> aside.oc-vibrancy-surface) {
+    position: relative;
+}
+
+/* 2+3. The sidebar becomes an absolutely-positioned slide-in overlay. */
+aside.oc-vibrancy-surface {
+    position: absolute !important;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    /* Above the content, below app modals/popovers (which sit at 50+). */
+    z-index: 20;
+    /* Always the full open width so the motion is a clean translate, not a grow. */
+    width: var(--oc-left-sidebar-width, 280px) !important;
+    min-width: var(--oc-left-sidebar-width, 280px) !important;
+    max-width: var(--oc-left-sidebar-width, 280px) !important;
+    transform: translateX(0);
+    /* Override the donor's inline width-transition with a transform slide.
+       transform/opacity only (doctrine: never animate layout props). */
+    transition: transform 220ms cubic-bezier(0.22, 1, 0.36, 1) !important;
+    /* Flat + borderless: drop the hard 1px rule, differentiate with a soft
+       shadow + a larger theme radius on the exposed edge. */
+    border-right: 0 !important;
+    box-shadow: 0 8px 30px -8px rgba(0, 0, 0, 0.28);
+    border-top-right-radius: var(--radius-xl);
+    border-bottom-right-radius: var(--radius-xl);
+}
+
+/* Closed: the donor sets aria-hidden — slide fully off-screen, no push, no peek. */
+aside.oc-vibrancy-surface[aria-hidden='true'] {
+    transform: translateX(-100%);
+    box-shadow: none;
+    pointer-events: none;
+}
+
+/* Respect reduced motion: no slide, just the aria-hidden visibility flip. */
+@media (prefers-reduced-motion: reduce) {
+    aside.oc-vibrancy-surface {
+        transition: none !important;
+    }
+}
