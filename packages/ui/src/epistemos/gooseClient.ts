@@ -204,9 +204,53 @@ const parseSseBlock = (block: string): GooseMessageEvent | null => {
 
 export class GooseEngineClient {
     private index: GooseSessionIndexEntry[] = readStoredIndex();
+    private pushTimer: number | null = null;
+
+    constructor() {
+        // The webview runs on a NON-PERSISTENT data store, so localStorage is
+        // per-launch only. The web server keeps the durable index copy
+        // (/goose-index); hydrate on boot, push on change.
+        void this.hydrateFromServer();
+    }
 
     listIndexedSessions(): GooseSessionIndexEntry[] {
         return [...this.index].sort((a, b) => b.updatedAt - a.updatedAt);
+    }
+
+    private async hydrateFromServer(): Promise<void> {
+        try {
+            const response = await runtimeFetch('/goose-index', { headers: { Accept: 'application/json' } });
+            if (!response.ok) return;
+            const parsed: unknown = await response.json();
+            if (!Array.isArray(parsed)) return;
+            const serverEntries = parsed.filter(
+                (entry): entry is GooseSessionIndexEntry =>
+                    !!entry && typeof entry === 'object' && typeof (entry as { id?: unknown }).id === 'string',
+            );
+            const byId = new Map<string, GooseSessionIndexEntry>();
+            for (const entry of serverEntries) byId.set(entry.id, entry);
+            for (const entry of this.index) {
+                const existing = byId.get(entry.id);
+                if (!existing || entry.updatedAt >= existing.updatedAt) byId.set(entry.id, entry);
+            }
+            this.index = [...byId.values()];
+            writeStoredIndex(this.index);
+        } catch {
+            // Offline/absent goose: the in-memory index still works this launch.
+        }
+    }
+
+    private schedulePushToServer(): void {
+        if (typeof window === 'undefined') return;
+        if (this.pushTimer !== null) window.clearTimeout(this.pushTimer);
+        this.pushTimer = window.setTimeout(() => {
+            this.pushTimer = null;
+            void runtimeFetch('/goose-index', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(this.index),
+            }).catch(() => undefined);
+        }, 400);
     }
 
     async createSession(workingDir: string): Promise<GooseSession> {
@@ -289,6 +333,7 @@ export class GooseEngineClient {
     removeIndexEntry(sessionId: string): void {
         this.index = this.index.filter((entry) => entry.id !== sessionId);
         writeStoredIndex(this.index);
+        this.schedulePushToServer();
     }
 
     /**
@@ -390,6 +435,7 @@ export class GooseEngineClient {
             this.index = this.index.map((candidate, position) => (position === existing ? entry : candidate));
         }
         writeStoredIndex(this.index);
+        this.schedulePushToServer();
     }
 
     private touchIndexEntry(
@@ -400,6 +446,7 @@ export class GooseEngineClient {
         if (!existing) return;
         this.index = this.index.map((entry) => (entry.id === sessionId ? update(entry) : entry));
         writeStoredIndex(this.index);
+        this.schedulePushToServer();
     }
 }
 
