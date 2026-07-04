@@ -436,6 +436,41 @@ export class GooseEngineClient {
         return gooseJson<unknown>('/config/providers');
     }
 
+    /** Configured goose providers (live-enumerated from goose's own
+     *  GET /config/providers), with their display name + known model names.
+     *  Only is_configured providers — the ones goose can actually run. */
+    async listConfiguredProviders(): Promise<
+        Array<{ name: string; displayName: string; models: string[] }>
+    > {
+        const raw = await this.providers();
+        const list = Array.isArray(raw) ? (raw as Array<Record<string, unknown>>) : [];
+        return list
+            .filter((p) => p && p.is_configured === true)
+            .map((p) => {
+                const meta = (p.metadata ?? {}) as Record<string, unknown>;
+                const known = Array.isArray(meta.known_models) ? (meta.known_models as Array<Record<string, unknown>>) : [];
+                return {
+                    name: String(p.name ?? ''),
+                    displayName: String(meta.display_name ?? p.name ?? ''),
+                    models: known.map((m) => String(m.name ?? '')).filter(Boolean),
+                };
+            })
+            .filter((p) => p.name.length > 0);
+    }
+
+    /** The goose config's currently-selected provider (active_provider). */
+    async getActiveProvider(): Promise<string | null> {
+        return this.readGooseConfig('active_provider');
+    }
+
+    /** Select a goose provider for a running session (goosed update_provider). */
+    async setSessionProvider(sessionId: string, provider: string): Promise<void> {
+        await gooseFetch('/agent/update_provider', {
+            method: 'POST',
+            body: JSON.stringify({ provider, session_id: sessionId }),
+        });
+    }
+
     // -----------------------------------------------------------------------
     // Goose's RESERVED value (Plan 1-PRO §7 Phase 4): MCP extensions, recipes,
     // scheduler. Typed adapter methods over the verified goosed endpoints

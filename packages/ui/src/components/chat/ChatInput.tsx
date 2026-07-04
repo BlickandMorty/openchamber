@@ -4,6 +4,7 @@ import { EpistemosTypewriterGreeting } from '@/epistemos/landing/EpistemosTypewr
 // EPISTEMOS(PATCH_LEDGER#P3a): per-conversation engine chip.
 import { EpistemosEngineChip } from '@/epistemos/EpistemosEngineChip';
 import { useEngineAwareCommands } from '@/epistemos/useEngineAwareCommands';
+import { EpistemosEngineModelControls } from '@/epistemos/EpistemosEngineModelControls';
 import { Textarea } from '@/components/ui/textarea';
 import { ComposerDictation } from '@/components/dictation/ComposerDictation';
 // sessionStore removed — currentSessionId comes from useSessionUIStore
@@ -4653,7 +4654,7 @@ const ChatInputComponent: React.FC<ChatInputProps> = ({ onOpenSettings, scrollTo
                                     <EpistemosEngineChip visible={newSessionDraftOpen} />
                                 </div>
                                 <div className={cn('flex items-center flex-1 justify-end', footerGapClass, 'md:gap-x-3')}>
-                                    <MemoModelControls className={cn('flex-1 min-w-0 justify-end')} />
+                                    <EpistemosEngineModelControls className={cn('flex-1 min-w-0 justify-end')} />
                                     <MemoComposerDictation
                                         radius={chatInputRadius}
                                         isMobile={isMobile}
