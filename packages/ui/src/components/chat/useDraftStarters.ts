@@ -3,6 +3,7 @@ import { arrayMove } from '@dnd-kit/sortable';
 import { useI18n } from '@/lib/i18n';
 import { useUIStore } from '@/stores/useUIStore';
 import { useCommandsStore } from '@/stores/useCommandsStore';
+import { useEngineAwareCommands } from '@/epistemos/useEngineAwareCommands';
 import { useSkillsStore } from '@/stores/useSkillsStore';
 import { useProjectsStore } from '@/stores/useProjectsStore';
 import { updateDesktopSettings } from '@/lib/persistence';
@@ -59,7 +60,7 @@ export type UseDraftStartersResult = {
 export function useDraftStarters(): UseDraftStartersResult {
     const { t } = useI18n();
     const globalRaw = useUIStore((s) => s.globalDraftStarters);
-    const commands = useCommandsStore((s) => s.commands);
+    const commands = useEngineAwareCommands();
     const skills = useSkillsStore((s) => s.skills);
     const activeProjectId = useProjectsStore((s) => s.activeProjectId);
     const projects = useProjectsStore((s) => s.projects);

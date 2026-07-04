@@ -3,6 +3,7 @@ import React from 'react';
 import { EpistemosTypewriterGreeting } from '@/epistemos/landing/EpistemosTypewriterGreeting';
 // EPISTEMOS(PATCH_LEDGER#P3a): per-conversation engine chip.
 import { EpistemosEngineChip } from '@/epistemos/EpistemosEngineChip';
+import { useEngineAwareCommands } from '@/epistemos/useEngineAwareCommands';
 import { Textarea } from '@/components/ui/textarea';
 import { ComposerDictation } from '@/components/dictation/ComposerDictation';
 // sessionStore removed — currentSessionId comes from useSessionUIStore
@@ -69,7 +70,6 @@ import { PROJECT_COLOR_MAP, PROJECT_ICON_MAP, ProjectIconImage } from '@/lib/pro
 import { useGitBranches, useGitStore, useIsGitRepo } from '@/stores/useGitStore';
 import { useDirectoryStore } from '@/stores/useDirectoryStore';
 import { useSkillsStore } from '@/stores/useSkillsStore';
-import { useCommandsStore } from '@/stores/useCommandsStore';
 import { useRuntimeAPIs } from '@/hooks/useRuntimeAPIs';
 import { useEffectiveDirectory } from '@/hooks/useEffectiveDirectory';
 import { createWorktreeDraft } from '@/lib/worktreeSessionCreator';
@@ -1175,7 +1175,7 @@ const ChatInputComponent: React.FC<ChatInputProps> = ({ onOpenSettings, scrollTo
 
     // Known slash-invocations (commands + skills + built-ins) used to highlight
     // matching /tokens in the composer, the same way confirmed @files are.
-    const availableCommands = useCommandsStore((s) => s.commands);
+    const availableCommands = useEngineAwareCommands();
     const availableSkills = useSkillsStore((s) => s.skills);
     const knownSlashNames = React.useMemo(() => {
         const names = new Set<string>([

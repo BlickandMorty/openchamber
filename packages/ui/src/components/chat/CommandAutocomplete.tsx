@@ -3,6 +3,7 @@ import { cn, fuzzyMatch } from '@/lib/utils';
 import { useSessionUIStore } from '@/sync/session-ui-store';
 import { useSessionMessages } from '@/sync/sync-context';
 import { useCommandsStore } from '@/stores/useCommandsStore';
+import { useEngineAwareCommands } from '@/epistemos/useEngineAwareCommands';
 import { useSkillsStore } from '@/stores/useSkillsStore';
 import { ScrollableOverlay } from '@/components/ui/ScrollableOverlay';
 import { Icon } from "@/components/icon/Icon";
@@ -72,7 +73,7 @@ export const CommandAutocomplete = React.forwardRef<CommandAutocompleteHandle, C
 
   const [commands, setCommands] = React.useState<CommandInfo[]>([]);
   const [loading, setLoading] = React.useState(false);
-  const commandsWithMetadata = useCommandsStore((s) => s.commands);
+  const commandsWithMetadata = useEngineAwareCommands();
   const refreshCommands = useCommandsStore((s) => s.loadCommands);
   const skills = useSkillsStore((s) => s.skills);
   const refreshSkills = useSkillsStore((s) => s.loadSkills);
