@@ -15,6 +15,7 @@ import {
     goosePartDeltaEvent,
     goosePartUpdatedEvent,
     goosePermissionAskedEvent,
+    extractGooseToolConfirmation,
     gooseSessionIdleEvent,
     gooseSessionToSdkSession,
     gooseTextPart,
@@ -204,29 +205,18 @@ const gooseRoutes: Record<string, GooseRoute> = {
 
         gooseEngineClient.prompt(sessionId, userText, {
             onMessage: (message) => {
-                // Permission shim (§3): tool-confirmation requests ride the
-                // conversation as content items tagged toolConfirmationRequest
-                // (goose MessageContent, serde tag "type"/camelCase). Surface
+                // Permission shim (§3): goose signals a tool-confirmation ASK as
+                // a MessageContent::ActionRequired content item riding the reply
+                // conversation ({type:"actionRequired", data:{actionType:
+                // "toolConfirmation", ...}} — verified in goose source; the
+                // extractor also handles the legacy top-level variant). Surface
                 // each once through the donor's permission.asked path.
                 if (Array.isArray(message.content)) {
                     for (const item of message.content) {
-                        if (!item || item.type !== 'toolConfirmationRequest') continue;
-                        const confirmationId = typeof item.id === 'string' ? item.id : null;
-                        if (!confirmationId || seenConfirmationIds.has(confirmationId)) continue;
-                        seenConfirmationIds.add(confirmationId);
-                        emitGooseEvent(
-                            directory,
-                            goosePermissionAskedEvent(sessionId, {
-                                id: confirmationId,
-                                toolName: typeof (item as { toolName?: unknown }).toolName === 'string'
-                                    ? ((item as { toolName: string }).toolName)
-                                    : undefined,
-                                arguments: (item as { arguments?: unknown }).arguments,
-                                prompt: typeof (item as { prompt?: unknown }).prompt === 'string'
-                                    ? ((item as { prompt: string }).prompt)
-                                    : null,
-                            }),
-                        );
+                        const confirmation = extractGooseToolConfirmation(item);
+                        if (!confirmation || seenConfirmationIds.has(confirmation.id)) continue;
+                        seenConfirmationIds.add(confirmation.id);
+                        emitGooseEvent(directory, goosePermissionAskedEvent(sessionId, confirmation));
                     }
                 }
                 if (message.role !== 'assistant') return;

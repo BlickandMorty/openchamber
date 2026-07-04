@@ -189,7 +189,45 @@ export const gooseSessionUpdatedEvent = (sessionId: string, info: Session): Even
     properties: { sessionID: sessionId, info },
 });
 
-/** goosed toolConfirmationRequest -> the donor's permission.asked shape. */
+/**
+ * Extract a tool-confirmation ASK from a goose message-content item. goose
+ * emits confirmations (verified in goose-providers/src/conversation/message.rs)
+ * via `with_action_required` -> `MessageContent::ActionRequired` — the LIVE
+ * wire shape is `{ type:"actionRequired", data:{ actionType:"toolConfirmation",
+ * id, toolName, arguments, prompt } }` (ActionRequired.data is NESTED, not
+ * flattened; MessageContent + the inner structs are rename_all=camelCase). The
+ * top-level `{ type:"toolConfirmationRequest", ... }` variant still exists in
+ * the enum but nothing produces it — handled defensively as legacy. Returns
+ * null for any other content item.
+ */
+export const extractGooseToolConfirmation = (
+    item: unknown,
+): { id: string; toolName?: string; arguments?: unknown; prompt?: string | null } | null => {
+    if (!item || typeof item !== 'object') return null;
+    const record = item as Record<string, unknown>;
+    let source: Record<string, unknown> | null = null;
+    if (record.type === 'actionRequired') {
+        const data = record.data;
+        if (
+            data &&
+            typeof data === 'object' &&
+            (data as Record<string, unknown>).actionType === 'toolConfirmation'
+        ) {
+            source = data as Record<string, unknown>;
+        }
+    } else if (record.type === 'toolConfirmationRequest') {
+        source = record;
+    }
+    if (!source || typeof source.id !== 'string' || source.id.length === 0) return null;
+    return {
+        id: source.id,
+        toolName: typeof source.toolName === 'string' ? source.toolName : undefined,
+        arguments: source.arguments,
+        prompt: typeof source.prompt === 'string' ? source.prompt : null,
+    };
+};
+
+/** goosed tool-confirmation -> the donor's permission.asked shape. */
 export const goosePermissionAskedEvent = (
     sessionId: string,
     confirmation: { id: string; toolName?: string; arguments?: unknown; prompt?: string | null },
