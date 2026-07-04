@@ -266,7 +266,42 @@ export class GooseEngineClient {
             createdAt: now,
             updatedAt: now,
         });
+        // goosed's /agent/start creates a session WITHOUT a provider selected
+        // (the Web UI picks one; `/reply` 'Provider not set' otherwise). Adopt
+        // the user's own goose config (active_provider + GOOSE_MODEL) so a turn
+        // works with zero extra setup. Best-effort: a session with no provider
+        // still exists; the reply surfaces the honest goosed error.
+        await this.applyConfiguredProvider(session.id).catch(() => undefined);
         return session;
+    }
+
+    /** Read a goose config value (verified endpoint: POST /config/read). */
+    private async readGooseConfig(key: string): Promise<string | null> {
+        try {
+            const response = await gooseFetch('/config/read', {
+                method: 'POST',
+                body: JSON.stringify({ key, is_secret: false }),
+            });
+            const value = await response.json();
+            return typeof value === 'string' ? value : null;
+        } catch {
+            return null;
+        }
+    }
+
+    /** Select the user's configured provider/model on a fresh session. */
+    private async applyConfiguredProvider(sessionId: string): Promise<void> {
+        const provider = await this.readGooseConfig('active_provider');
+        if (!provider) return;
+        const model = (await this.readGooseConfig('GOOSE_MODEL')) ?? undefined;
+        await gooseFetch('/agent/update_provider', {
+            method: 'POST',
+            body: JSON.stringify({
+                provider,
+                session_id: sessionId,
+                ...(model ? { model } : {}),
+            }),
+        });
     }
 
     async getSession(sessionId: string): Promise<GooseSession> {
