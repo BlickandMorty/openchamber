@@ -175,12 +175,28 @@ const concatenatedText = (message: GooseMessage): string => {
 };
 
 /** Diffs successive whole-message payloads into appended-text deltas. */
+/**
+ * Stable id for goose's live assistant message. goosed streams reply Messages
+ * with `id: null` (Message.id is Option<String> and is not set mid-stream), so
+ * BOTH the assistant-message event (engineDispatch onMessage) and the text-part
+ * events (this synthesizer) MUST fall back to the SAME id — otherwise the part
+ * attaches to a phantom message and the bubble renders blank. This shared helper
+ * keeps the two in lock-step.
+ */
+export const gooseLiveAssistantMessageId = (sessionId: string): string => `${sessionId}-assistant-live`;
+
 export class GooseDeltaSynthesizer {
     private readonly lastTextByMessageId = new Map<string, string>();
 
-    consume(message: GooseMessage): { messageId: string; appendedText: string; fullText: string } | null {
-        const messageId = typeof message.id === 'string' && message.id.length > 0 ? message.id : null;
-        if (!messageId) return null;
+    consume(
+        message: GooseMessage,
+        fallbackId: string,
+    ): { messageId: string; appendedText: string; fullText: string } | null {
+        // goosed sends id:null on the reply message — use the SAME fallback the
+        // assistant-message event uses so the text part attaches (was: return
+        // null here, which dropped ALL text -> blank replies).
+        const messageId =
+            typeof message.id === 'string' && message.id.length > 0 ? message.id : fallbackId;
         const fullText = concatenatedText(message);
         const previous = this.lastTextByMessageId.get(messageId) ?? '';
         this.lastTextByMessageId.set(messageId, fullText);
@@ -580,7 +596,7 @@ export class GooseEngineClient {
                             case 'Message': {
                                 const message = (event as { message: GooseMessage }).message;
                                 handlers.onMessage?.(message);
-                                const delta = synthesizer.consume(message);
+                                const delta = synthesizer.consume(message, gooseLiveAssistantMessageId(sessionId));
                                 if (delta && delta.appendedText.length > 0) {
                                     handlers.onTextDelta?.(delta.messageId, delta.appendedText, delta.fullText);
                                 }

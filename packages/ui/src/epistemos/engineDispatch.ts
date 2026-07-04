@@ -6,7 +6,7 @@
 // index, every call passes through — zero behavior change until the engine
 // chip creates one.
 
-import { gooseEngineClient } from '@/epistemos/gooseClient';
+import { gooseEngineClient, gooseLiveAssistantMessageId } from '@/epistemos/gooseClient';
 import { emitGooseEvent } from '@/epistemos/gooseEventBridge';
 import {
     gooseAssistantMessageInfo,
@@ -223,7 +223,7 @@ const gooseRoutes: Record<string, GooseRoute> = {
                 const messageId =
                     typeof message.id === 'string' && message.id.length > 0
                         ? message.id
-                        : `${sessionId}-assistant-live`;
+                        : gooseLiveAssistantMessageId(sessionId);
                 if (!seenAssistantIds.has(messageId)) {
                     seenAssistantIds.add(messageId);
                     emitGooseEvent(
