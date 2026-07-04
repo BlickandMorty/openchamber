@@ -348,6 +348,50 @@ export class GooseEngineClient {
         return gooseJson<unknown>('/config/providers');
     }
 
+    // -----------------------------------------------------------------------
+    // Goose's RESERVED value (Plan 1-PRO §7 Phase 4): MCP extensions, recipes,
+    // scheduler. Typed adapter methods over the verified goosed endpoints
+    // (docs/GOOSE_ONLY_SURFACES_READINESS.md) so the owner's future badge-gated
+    // UI calls these instead of hand-rolling fetches. Paths corrected:
+    // /recipes/list + /schedule/list (bare paths 404).
+    // -----------------------------------------------------------------------
+
+    /** MCP extensions available to goose (builtin + user-added). */
+    async listExtensions(): Promise<unknown> {
+        return gooseJson<unknown>('/config/extensions');
+    }
+
+    async addExtension(config: Record<string, unknown>): Promise<unknown> {
+        return gooseJson<unknown>('/agent/add_extension', {
+            method: 'POST',
+            body: JSON.stringify(config),
+        });
+    }
+
+    async removeExtension(name: string): Promise<unknown> {
+        return gooseJson<unknown>('/agent/remove_extension', {
+            method: 'POST',
+            body: JSON.stringify({ name }),
+        });
+    }
+
+    /** Recipe manifests (`GET /recipes/list` -> {manifests: [...]}). */
+    async listRecipes(): Promise<unknown> {
+        return gooseJson<unknown>('/recipes/list');
+    }
+
+    /** Scheduled jobs (`GET /schedule/list` -> {jobs: [...]}). */
+    async listSchedules(): Promise<unknown> {
+        return gooseJson<unknown>('/schedule/list');
+    }
+
+    async runScheduleNow(scheduleId: string): Promise<unknown> {
+        return gooseJson<unknown>(`/schedule/${encodeURIComponent(scheduleId)}/run_now`, {
+            method: 'POST',
+            body: JSON.stringify({}),
+        });
+    }
+
     /**
      * Reply to a tool-confirmation request (§3 corrected payload):
      * `{id, action, session_id}` — `principal_type` is omitted because goosed
