@@ -39,3 +39,22 @@ visual language, not an agent's invention:
 
 The backend is proven ready either way; whichever presentation the owner picks
 sits on top of the already-working `/goose/*` transport.
+
+## Component ready to mount (2026-07-04)
+
+`packages/ui/src/epistemos/EpistemosGooseCapabilitiesPanel.tsx` is a
+self-contained, theme-compliant, read-only panel that renders all three
+capabilities via the adapter methods. The owner mounts it wherever the design
+calls for — a badge-gated tab, a sidebar section, a settings page — with one
+line, gated on the active engine:
+
+```tsx
+import { EpistemosGooseCapabilitiesPanel } from '@/epistemos/EpistemosGooseCapabilitiesPanel';
+// ...render where you want it, only for goose sessions:
+<EpistemosGooseCapabilitiesPanel active={engineForSession(currentSessionId) === 'goose'} />
+```
+
+So the goose-only row's ENTIRE code path is complete — transport (proxy),
+data access (adapter methods + tests), and presentation (this component). The
+only remaining decision is placement, which is deliberately the owner's.
+
