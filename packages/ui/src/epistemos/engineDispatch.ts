@@ -7,6 +7,18 @@
 // chip creates one.
 
 import { gooseEngineClient } from '@/epistemos/gooseClient';
+import { emitGooseEvent } from '@/epistemos/gooseEventBridge';
+import {
+    gooseAssistantMessageInfo,
+    gooseConversationToSdkMessages,
+    gooseMessageUpdatedEvent,
+    goosePartDeltaEvent,
+    goosePartUpdatedEvent,
+    gooseSessionIdleEvent,
+    gooseSessionToSdkSession,
+    gooseTextPart,
+    gooseUserMessageInfo,
+} from '@/epistemos/gooseSdkMapping';
 
 export type EngineKind = 'opencode' | 'goose';
 
@@ -58,10 +70,111 @@ const gooseRoutes: Record<string, GooseRoute> = {
         if (!title) return passthrough();
         return gooseEngineClient.renameSession(sessionId, title);
     },
-    // getSession / getSessionMessages / sendMessage: land with the transcript
-    // mapping step (docs/GOOSE_ENGINE_WIRING.md order #2) — until then no goose
-    // session can be CREATED through the UI, so these can never be reached
-    // with a goose id.
+    getSession: (args, passthrough) => {
+        const sessionId = firstArgSessionId(args);
+        if (!sessionId || engineForSession(sessionId) !== 'goose') return passthrough();
+        const indexEntry = gooseEngineClient
+            .listIndexedSessions()
+            .find((entry) => entry.id === sessionId);
+        if (!indexEntry) return passthrough();
+        return gooseEngineClient
+            .getSession(sessionId)
+            .then((session) => gooseSessionToSdkSession(session, indexEntry))
+            .catch(() => gooseSessionToSdkSession(undefined, indexEntry));
+    },
+    getSessionMessages: (args, passthrough) => {
+        const sessionId = firstArgSessionId(args);
+        if (!sessionId || engineForSession(sessionId) !== 'goose') return passthrough();
+        const indexEntry = gooseEngineClient
+            .listIndexedSessions()
+            .find((entry) => entry.id === sessionId);
+        if (!indexEntry) return passthrough();
+        return gooseEngineClient
+            .getSession(sessionId)
+            .then((session) =>
+                gooseConversationToSdkMessages(sessionId, indexEntry.workingDir, session.conversation),
+            )
+            .catch(() => []);
+    },
+    sendMessage: (args, passthrough) => {
+        const params = args[0];
+        if (!params || typeof params !== 'object') return passthrough();
+        const sessionId = (params as { id?: unknown }).id;
+        if (typeof sessionId !== 'string' || engineForSession(sessionId) !== 'goose') {
+            return passthrough();
+        }
+        const indexEntry = gooseEngineClient
+            .listIndexedSessions()
+            .find((entry) => entry.id === sessionId);
+        if (!indexEntry) return passthrough();
+
+        const directory = indexEntry.workingDir;
+        const typed = params as { text?: unknown; prefaceText?: unknown; messageId?: unknown };
+        const preface = typeof typed.prefaceText === 'string' ? typed.prefaceText.trim() : '';
+        const body = typeof typed.text === 'string' ? typed.text : '';
+        const userText = preface.length > 0 ? `${preface}\n\n${body}` : body;
+        const userMessageId =
+            typeof typed.messageId === 'string' && typed.messageId.length > 0
+                ? typed.messageId
+                : `gmsg-${Date.now().toString(16)}`;
+
+        // Optimistic user message through the donor pipeline (first-token
+        // doctrine: the user's message paints instantly).
+        emitGooseEvent(directory, gooseMessageUpdatedEvent(sessionId, gooseUserMessageInfo(sessionId, userMessageId)));
+        if (userText.length > 0) {
+            emitGooseEvent(directory, goosePartUpdatedEvent(sessionId, gooseTextPart(sessionId, userMessageId, userText)));
+        }
+
+        const seenAssistantIds = new Set<string>();
+        const latestTextByMessage = new Map<string, string>();
+
+        gooseEngineClient.prompt(sessionId, userText, {
+            onMessage: (message) => {
+                if (message.role !== 'assistant') return;
+                const messageId =
+                    typeof message.id === 'string' && message.id.length > 0
+                        ? message.id
+                        : `${sessionId}-assistant-live`;
+                if (!seenAssistantIds.has(messageId)) {
+                    seenAssistantIds.add(messageId);
+                    emitGooseEvent(
+                        directory,
+                        gooseMessageUpdatedEvent(
+                            sessionId,
+                            gooseAssistantMessageInfo(sessionId, messageId, directory, { parentID: userMessageId }),
+                        ),
+                    );
+                }
+            },
+            onTextDelta: (messageId, appendedText, fullText) => {
+                latestTextByMessage.set(messageId, fullText);
+                emitGooseEvent(directory, goosePartDeltaEvent(sessionId, messageId, appendedText));
+            },
+            onFinish: () => {
+                // Converge every streamed message on its full text, then idle.
+                for (const [messageId, fullText] of latestTextByMessage) {
+                    emitGooseEvent(directory, goosePartUpdatedEvent(sessionId, gooseTextPart(sessionId, messageId, fullText)));
+                    emitGooseEvent(
+                        directory,
+                        gooseMessageUpdatedEvent(
+                            sessionId,
+                            gooseAssistantMessageInfo(sessionId, messageId, directory, {
+                                parentID: userMessageId,
+                                completedSeconds: Math.floor(Date.now() / 1000),
+                            }),
+                        ),
+                    );
+                }
+                emitGooseEvent(directory, gooseSessionIdleEvent(sessionId));
+            },
+            onError: (error) => {
+                console.warn('[epistemos-goose] reply stream error:', error);
+                emitGooseEvent(directory, gooseSessionIdleEvent(sessionId));
+            },
+        });
+
+        return Promise.resolve(userMessageId);
+    },
 };
 
 export const wrapWithEngineDispatch = <T extends object>(service: T): T => {
