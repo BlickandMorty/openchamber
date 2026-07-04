@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { runtimeFetch } from '@/lib/runtime-fetch';
-import { getNextSessionEngine, setNextSessionEngine, type EngineKind } from '@/epistemos/engineDispatch';
+import { setNextSessionEngine } from '@/epistemos/engineDispatch';
+import { useNextSessionEngine } from '@/epistemos/useActiveEngine';
 
 // EPISTEMOS overlay (Plan 1-PRO §0.3/§5): the composer engine chip — engine
 // is chosen PER CONVERSATION at draft time; a session's engine never changes
@@ -23,7 +24,10 @@ const probeGooseAvailability = async (): Promise<boolean> => {
 
 export const EpistemosEngineChip: React.FC<{ visible: boolean }> = ({ visible }) => {
     const [gooseAvailable, setGooseAvailable] = useState(false);
-    const [engine, setEngine] = useState<EngineKind>(getNextSessionEngine());
+    // Single source of truth: the reactive intent. The chip, the model control,
+    // the capabilities button and command-hiding all read the SAME value, so
+    // they can never disagree (incl. the 10-min intent-TTL expiry).
+    const engine = useNextSessionEngine();
 
     useEffect(() => {
         let cancelled = false;
@@ -39,16 +43,13 @@ export const EpistemosEngineChip: React.FC<{ visible: boolean }> = ({ visible })
         // Draft closed/opened: new drafts always start on the default engine.
         if (!visible) {
             setNextSessionEngine('opencode');
-            setEngine('opencode');
         }
     }, [visible]);
 
     if (!visible || !gooseAvailable) return null;
 
     const toggle = () => {
-        const next: EngineKind = engine === 'goose' ? 'opencode' : 'goose';
-        setEngine(next);
-        setNextSessionEngine(next);
+        setNextSessionEngine(engine === 'goose' ? 'opencode' : 'goose');
     };
 
     return (
