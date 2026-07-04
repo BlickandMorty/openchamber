@@ -153,12 +153,17 @@ const gooseRoutes: Record<string, GooseRoute> = {
             .listIndexedSessions()
             .find((entry) => entry.id === sessionId);
         if (!indexEntry) return passthrough();
+        // Propagate a fetch failure (reject) exactly like the donor's opencode
+        // getSessionMessages (which throws via unwrapSdkData) — a swallowed
+        // `[]` would render a BLANK transcript on a transient failure, telling
+        // the user their goose conversation vanished (silent-empty on an
+        // authoritative path). A genuinely empty conversation still resolves []
+        // through the .then; only a real failure rejects.
         return gooseEngineClient
             .getSession(sessionId)
             .then((session) =>
                 gooseConversationToSdkMessages(sessionId, indexEntry.workingDir, session.conversation),
-            )
-            .catch(() => []);
+            );
     },
     sendMessage: (args, passthrough) => {
         const params = args[0];
