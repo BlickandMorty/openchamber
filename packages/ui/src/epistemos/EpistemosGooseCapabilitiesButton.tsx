@@ -31,7 +31,7 @@ export const EpistemosGooseCapabilitiesButton: React.FC = () => {
             <button
                 type="button"
                 onClick={() => setOpen((o) => !o)}
-                className="inline-flex h-7 items-center gap-1 rounded-md px-2 typography-meta text-[var(--surface-mutedForeground)] hover:bg-[var(--interactive-hover)]"
+                className="inline-flex h-7 items-center gap-1 rounded-md px-2 typography-meta text-[var(--muted-foreground)] hover:bg-[var(--interactive-hover)]"
                 title="goose capabilities — extensions, recipes, scheduler, tools, apps"
                 aria-haspopup="dialog"
                 aria-expanded={open}

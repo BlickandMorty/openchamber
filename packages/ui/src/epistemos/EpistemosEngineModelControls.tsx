@@ -74,7 +74,7 @@ const GooseModelButton: React.FC<{ className?: string }> = ({ className }) => {
             <button
                 type="button"
                 onClick={() => setOpen((o) => !o)}
-                className="inline-flex items-center gap-1 rounded px-2 py-1 typography-meta text-[var(--surface-mutedForeground)] hover:bg-[var(--interactive-hover)]"
+                className="inline-flex items-center gap-1 rounded px-2 py-1 typography-meta text-[var(--muted-foreground)] hover:bg-[var(--interactive-hover)]"
                 title="goose provider (live from goose config)"
                 aria-haspopup="listbox"
                 aria-expanded={open}
@@ -88,11 +88,11 @@ const GooseModelButton: React.FC<{ className?: string }> = ({ className }) => {
                     role="listbox"
                     className="absolute bottom-full right-0 mb-1 z-50 min-w-[13rem] max-h-72 overflow-y-auto rounded border border-[var(--interactive-border)] bg-[var(--surface-elevated)] p-1 shadow-lg"
                 >
-                    <div className="typography-micro text-[var(--surface-mutedForeground)] px-2 py-1">
+                    <div className="typography-micro text-[var(--muted-foreground)] px-2 py-1">
                         goose providers · live
                     </div>
                     {providers.length === 0 && (
-                        <div className="px-2 py-1 typography-meta text-[var(--surface-mutedForeground)]">
+                        <div className="px-2 py-1 typography-meta text-[var(--muted-foreground)]">
                             No configured goose providers
                         </div>
                     )}
@@ -106,7 +106,7 @@ const GooseModelButton: React.FC<{ className?: string }> = ({ className }) => {
                             className={`flex w-full items-center justify-between gap-2 rounded px-2 py-1 text-left typography-meta hover:bg-[var(--interactive-hover)] ${
                                 p.name === active
                                     ? 'text-[var(--surface-foreground)]'
-                                    : 'text-[var(--surface-mutedForeground)]'
+                                    : 'text-[var(--muted-foreground)]'
                             }`}
                         >
                             <span className="truncate">{p.displayName}</span>
