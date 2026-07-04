@@ -1,4 +1,6 @@
 import { createOpencodeClient, OpencodeClient } from "@opencode-ai/sdk/v2";
+// EPISTEMOS(PATCH_LEDGER#R6a): engine-dispatch seam (goose adapter routing).
+import { wrapWithEngineDispatch } from "@/epistemos/engineDispatch";
 import type { FilesAPI } from "../api/types";
 import { getDesktopHomeDirectory } from "../desktop";
 import type {
@@ -1850,6 +1852,9 @@ class OpencodeService {
 }
 
 // Exported singleton instance
-export const opencodeClient = new OpencodeService();
+// EPISTEMOS(PATCH_LEDGER#R6a): calls targeting goose sessions (adapter-index
+// membership) route to the goose adapter; everything else passes through
+// untouched. Zero behavior change until a goose session exists.
+export const opencodeClient = wrapWithEngineDispatch(new OpencodeService());
 
 // Exported types

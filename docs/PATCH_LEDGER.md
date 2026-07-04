@@ -26,10 +26,5 @@ stock-upstream.
 | R6c | `packages/ui/src/lib/theme/cssGenerator.ts` | `generateEpistemosLandingVariables` emits `--landing-hero-wash` (primary.base @ 11% oklch), `--landing-hero-wash-rim` (surface.elevated @ 70%), `--landing-hero-wash-gradient` for every theme | June gradient hook; formula provenance docs/JUNE_SIGNATURE_MEASUREMENTS.md |
 | R6d | `packages/web/server/index.js` | import + `registerGooseProxyRoutes(app)` after `setupBaseRoutes` | Mounts the `/goose/*` same-origin proxy (new overlay file `lib/goose/proxy.js`, node:http streaming, X-Secret-Key attached server-side from `EPISTEMOS_GOOSE_PORT`/`EPISTEMOS_GOOSE_SECRET`); inert without the env. Smoke-verified against real goosed: direct-without-secret 401, via-proxy 200 |
 
-## Reserved upcoming rows (Plan 1 §6/R6)
-
-| ID | File | Planned hunk |
-|---|---|---|
-| R6a | `packages/ui/src/lib/opencode/client.ts` | engine-dispatch injection point (goose adapter behind the SDK-shaped seam) |
-| R6b | `packages/ui/src/sync/event-pipeline.ts` | goose event translation entry (only if the adapter cannot stay fully outside) |
 | R6b | `packages/ui/src/sync/sync-context.tsx` | import + `registerGooseEventIngest(...)` beside pipeline creation, unregister in the effect cleanup | goose adapter synthetic events (message.part.delta/updated, session.idle) enter `handleEvent` — the exact ingest opencode payloads use — skipping only stream-watchdog bookkeeping (synthetic ≠ transport activity) |
+| R6a | `packages/ui/src/lib/opencode/client.ts` | top import + `export const opencodeClient = wrapWithEngineDispatch(new OpencodeService())` | Engine-dispatch seam (overlay `epistemos/engineDispatch.ts`): goose-session calls route to the adapter by index membership; pass-through otherwise. Zero behavior change until the engine chip can create a goose session. event-pipeline.ts stays UNTOUCHED — the bridge feeds `handleEvent` directly, so the reserved R6b pipeline hunk proved unnecessary |
