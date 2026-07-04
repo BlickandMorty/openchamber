@@ -433,17 +433,20 @@ export class GooseEngineClient {
         return gooseJson<unknown>('/config/extensions');
     }
 
-    async addExtension(config: Record<string, unknown>): Promise<unknown> {
+    // goosed AddExtensionRequest/RemoveExtensionRequest (goose-server/src/routes/
+    // agent.rs:101/107) have NO rename_all -> snake_case, and BOTH REQUIRE
+    // session_id (an agent add/remove is scoped to a running agent session).
+    async addExtension(sessionId: string, config: Record<string, unknown>): Promise<unknown> {
         return gooseJson<unknown>('/agent/add_extension', {
             method: 'POST',
-            body: JSON.stringify(config),
+            body: JSON.stringify({ session_id: sessionId, config }),
         });
     }
 
-    async removeExtension(name: string): Promise<unknown> {
+    async removeExtension(sessionId: string, name: string): Promise<unknown> {
         return gooseJson<unknown>('/agent/remove_extension', {
             method: 'POST',
-            body: JSON.stringify({ name }),
+            body: JSON.stringify({ name, session_id: sessionId }),
         });
     }
 
