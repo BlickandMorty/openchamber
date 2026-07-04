@@ -6,8 +6,12 @@ import type { StoreApi } from "zustand"
 import { useStore } from "zustand"
 import type { OpencodeClient } from "@opencode-ai/sdk/v2/client"
 import { createEventPipeline } from "./event-pipeline"
-// EPISTEMOS(PATCH_LEDGER#R6b): goose adapter synthetic-event ingest.
+// EPISTEMOS(PATCH_LEDGER#R6b): goose adapter synthetic-event ingest + the
+// native-chrome intent listener (side-effect import — it must load from the
+// app layer, NOT from the client.ts eval chain, or it closes a module cycle
+// that TDZ-crashes SPA boot).
 import { registerGooseEventIngest } from "@/epistemos/gooseEventBridge"
+import "@/epistemos/chromeIntents"
 import { isVSCodeRuntime } from "@/lib/desktop"
 import { isMobileSurfaceRuntime } from "@/lib/runtimeSurface"
 import { reduceGlobalEvent, applyGlobalProject, applyDirectoryEvent, type SessionMaterializationReason } from "./event-reducer"

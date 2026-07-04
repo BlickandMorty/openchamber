@@ -7,9 +7,12 @@
 // transport activity.
 
 import type { Event } from '@opencode-ai/sdk/v2/client';
-// Side-effect: registers the native-chrome intent listener alongside the
-// event bridge (both are epistemos<->SPA seams loaded via SyncProvider).
-import '@/epistemos/chromeIntents';
+// NOTE: chromeIntents is deliberately NOT imported here. This module sits on
+// the opencodeClient eval chain (client.ts -> engineDispatch -> here); pulling
+// chromeIntents (-> session-ui-store -> client.ts) closed a module cycle that
+// broke SPA boot with a TDZ ReferenceError ("Cannot access 'P' before
+// initialization" — caught live twice by the render probe). SyncProvider
+// imports chromeIntents instead (see R6b hunk).
 
 type GooseEventIngest = (directory: string, payload: Event) => void;
 
