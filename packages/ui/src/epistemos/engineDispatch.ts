@@ -85,10 +85,13 @@ export const getNextSessionEngine = (): EngineKind => {
 
 const consumeNextSessionEngine = (): EngineKind => {
     const engine = getNextSessionEngine();
-    const changed = nextSessionEngine !== 'opencode';
+    // Reset the intent SILENTLY (no notify): this runs DURING goose session
+    // creation (createSession route). Notifying here would flip the bar to
+    // opencode for a frame before currentSessionId/draftOpen update it to the
+    // new goose session — a visible flash. The bar re-renders from that session-
+    // state change instead; the reset only governs the NEXT draft.
     nextSessionEngine = 'opencode';
     nextSessionEngineSetAt = 0;
-    if (changed) notifyEngineIntent();
     return engine;
 };
 
