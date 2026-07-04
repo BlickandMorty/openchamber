@@ -3,6 +3,8 @@ import { OpenChamberLogo } from '@/components/ui/OpenChamberLogo';
 import { useThemeSystem } from '@/contexts/useThemeSystem';
 import { useGlobalSyncStore } from '@/sync/global-sync-store';
 import { useI18n } from '@/lib/i18n';
+// EPISTEMOS(PATCH_LEDGER#P2c): landing signatures — typewriter headline + hero wash.
+import { EpistemosTypewriterGreeting } from '@/epistemos/landing/EpistemosTypewriterGreeting';
 
 const ChatEmptyState: React.FC = () => {
     const { t } = useI18n();
@@ -12,7 +14,7 @@ const ChatEmptyState: React.FC = () => {
     const textColor = currentTheme?.colors?.surface?.mutedForeground || 'var(--muted-foreground)';
 
     return (
-        <div className="flex flex-col items-center justify-center min-h-full w-full gap-6">
+        <div className="epistemos-landing-wash flex flex-col items-center justify-center min-h-full w-full gap-6">
             <OpenChamberLogo width={140} height={140} className="opacity-20" />
             {initError ? (
                 <div className="flex flex-col items-center gap-2 max-w-md text-center px-4">
@@ -22,7 +24,7 @@ const ChatEmptyState: React.FC = () => {
                     </span>
                 </div>
             ) : (
-                <span className="text-body-md" style={{ color: textColor }}>{t('chat.emptyState.startNewChat')}</span>
+                <EpistemosTypewriterGreeting text={t('chat.emptyState.startNewChat')} />
             )}
         </div>
     );

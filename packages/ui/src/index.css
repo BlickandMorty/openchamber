@@ -9,8 +9,9 @@
    recalc during which the layered `.chat-message-column` width clamp briefly
    lost, flashing message text to full width before it snapped back. */
 @import "katex/dist/katex.min.css";
-/* EPISTEMOS(PATCH_LEDGER#P2b): June message-bar signature overlay. */
+/* EPISTEMOS(PATCH_LEDGER#P2b): June bar + landing signature overlays. */
 @import "./epistemos/juneBar.css";
+@import "./epistemos/landing/landing.css";
 @source "./**/*.{ts,tsx,css}";
 
 /* KaTeX theme overrides for light/dark mode */

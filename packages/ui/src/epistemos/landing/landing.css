@@ -1,0 +1,53 @@
+/* EPISTEMOS overlay: landing signatures (Plan 1-PRO §5) — the RetroGaming
+   typewriter greeting and the theme-derived June hero wash. Self-hosted font
+   per the performance doctrine (no CDN); RetroGaming.ttf is the owner's own
+   pixel font from the native app (June's commercial typefaces are never
+   copied). */
+
+@font-face {
+  font-family: 'Retro Gaming';
+  /* Served from the web package's public/ passthrough (same-origin, no CDN);
+     a relative url here fails to resolve through the tailwind v4 css
+     pipeline's import inlining. */
+  src: url('/epistemos/RetroGaming.ttf') format('truetype');
+  font-display: swap;
+}
+
+.epistemos-typewriter {
+  font-family: 'Retro Gaming', ui-monospace, monospace;
+  font-size: 15px;
+  letter-spacing: 0.02em;
+  color: var(--muted-foreground);
+  display: inline-flex;
+  align-items: baseline;
+  gap: 3px;
+  min-height: 1.4em;
+}
+
+.epistemos-typewriter-caret {
+  display: inline-block;
+  width: 0.55em;
+  height: 1.05em;
+  background: currentColor;
+  opacity: 0.8;
+  transform: translateY(0.12em);
+  animation: epistemos-caret-blink 1.06s steps(1) infinite;
+}
+
+@keyframes epistemos-caret-blink {
+  50% {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .epistemos-typewriter-caret {
+    animation: none;
+  }
+}
+
+/* June's new-session hero wash: the theme-derived gradient pooling at the
+   bottom of the landing (vars emitted per-theme by cssGenerator, ledger R6c). */
+.epistemos-landing-wash {
+  background: var(--landing-hero-wash-gradient);
+}

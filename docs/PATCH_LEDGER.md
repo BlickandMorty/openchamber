@@ -19,7 +19,8 @@ stock-upstream.
 | R2d | `packages/web/server/lib/opencode/openchamber-routes.js` | `/api/openchamber/update-check` answers `{available:false}` and `/api/openchamber/update-install` answers 400 when `EPISTEMOS_EMBED === '1'` | Server-side choke point: covers ALL client callers (useUpdateStore, UpdateDialog.tsx:163, Header.tsx:942 — the latter two were added upstream after the research base) and blocks the package-manager spawn |
 
 | P2a | `packages/ui/src/components/chat/ChatInput.tsx` | `data-epistemos-composer="true"` attribute on the composer box div (~:4329) — style hook only, zero behavior change | June bar needs a stable selector; the box has no semantic class and sets radius/bg as inline styles |
-| P2b | `packages/ui/src/index.css` | `@import "./epistemos/juneBar.css";` after the katex import | Loads the June bar overlay (geometry+color only, measured values in docs/JUNE_SIGNATURE_MEASUREMENTS.md) |
+| P2b | `packages/ui/src/index.css` | `@import "./epistemos/juneBar.css";` + `@import "./epistemos/landing/landing.css";` after the katex import | Loads the June bar + landing overlays (geometry+color only, measured values in docs/JUNE_SIGNATURE_MEASUREMENTS.md) |
+| P2c | `packages/ui/src/components/chat/ChatEmptyState.tsx` | root div gains `epistemos-landing-wash`; the start-new-chat span becomes `<EpistemosTypewriterGreeting text={t('chat.emptyState.startNewChat')} />` | Landing signatures: theme-derived June hero wash + RetroGaming typewriter headline (types the donor's own localized string — copy/i18n stay stock) |
 
 ## Reserved upcoming rows (Plan 1 §6/R6)
 
