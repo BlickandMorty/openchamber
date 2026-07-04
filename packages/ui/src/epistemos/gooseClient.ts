@@ -349,6 +349,10 @@ export class GooseEngineClient {
             role: 'user',
             created: Math.floor(Date.now() / 1000),
             content: [{ type: 'text', text: userText }],
+            // Required by the goose Message struct (verified in source:
+            // MessageMetadata { user_visible, agent_visible }, camelCase,
+            // no serde default — /reply 422s without it).
+            metadata: { userVisible: true, agentVisible: true },
         };
 
         void (async () => {

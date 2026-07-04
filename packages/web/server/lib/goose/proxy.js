@@ -103,13 +103,38 @@ export const registerGooseProxyRoutes = (app, { logger = console } = {}) => {
       ? req.originalUrl.slice('/goose'.length) || '/'
       : req.originalUrl;
 
+    // Donor middleware upstream of this mount parses request bodies, so
+    // req.pipe() can deliver NOTHING and the engine waits forever for a body
+    // whose Content-Length was announced (hit live: POST /goose/agent/start
+    // hung through the proxy while the direct call answered instantly — the
+    // same consumed-body failure as the index PUT). Re-serialize a parsed
+    // body; stream only when the request is still unread.
+    let bodyBuffer = null;
+    if (req.body !== undefined && req.body !== null) {
+      if (Buffer.isBuffer(req.body)) {
+        bodyBuffer = req.body;
+      } else if (typeof req.body === 'string') {
+        bodyBuffer = Buffer.from(req.body);
+      } else if (typeof req.body === 'object' && Object.keys(req.body).length > 0) {
+        bodyBuffer = Buffer.from(JSON.stringify(req.body));
+      } else if (typeof req.body === 'object' && /application\/json/i.test(String(req.headers['content-type'] || ''))) {
+        // Parsed-but-empty JSON body ({}): still terminate the request honestly.
+        bodyBuffer = Buffer.from(JSON.stringify(req.body));
+      }
+    }
+
+    const upstreamHeaders = buildUpstreamHeaders(req.headers, secret);
+    if (bodyBuffer) {
+      upstreamHeaders['content-length'] = String(bodyBuffer.length);
+    }
+
     const upstream = http.request(
       {
         host: '127.0.0.1',
         port,
         path: upstreamPath,
         method: req.method,
-        headers: buildUpstreamHeaders(req.headers, secret),
+        headers: upstreamHeaders,
       },
       (upstreamRes) => {
         res.status(upstreamRes.statusCode || 502);
@@ -146,7 +171,11 @@ export const registerGooseProxyRoutes = (app, { logger = console } = {}) => {
       upstream.destroy();
     });
 
-    req.pipe(upstream);
+    if (bodyBuffer) {
+      upstream.end(bodyBuffer);
+    } else {
+      req.pipe(upstream);
+    }
   });
 
   logger.info?.(`[goose-proxy] /goose/* -> 127.0.0.1:${port} (secret ${secret ? 'attached' : 'ABSENT'})`);
