@@ -216,6 +216,15 @@ function getSessionDirectory(sessionId: string): string | undefined {
     || dir()
 }
 
+// EPISTEMOS: the directory a goose permission event must route to — the adapter
+// index workingDir (what emitGooseEvent used for permission.asked), so the
+// ask and the reply land in the same child store. Falls back to the opencode
+// lookup only if the session somehow isn't indexed.
+function gooseSessionDirectory(sessionId: string): string {
+  const indexed = gooseEngineClient.listIndexedSessions().find((entry) => entry.id === sessionId)
+  return indexed?.workingDir || getSessionDirectory(sessionId) || ""
+}
+
 function findSessionDirectoryInChildStores(sessionId: string): string | null {
   const stores = _childStores
   if (!stores || !sessionId) return null
@@ -749,8 +758,11 @@ export async function respondToPermission(
   if (engineForSession(sessionId) === "goose") {
     const action = response === "once" ? "allow_once" : response === "always" ? "always_allow" : "deny_once"
     await gooseEngineClient.confirmToolAction(sessionId, requestId, action)
-    const directory = getSessionDirectory(sessionId) || ""
-    emitGooseEvent(directory, goosePermissionRepliedEvent(sessionId, requestId, response))
+    // Route the reply to the SAME directory the permission.asked used (the
+    // goose index workingDir), not getSessionDirectory — a non-materialized
+    // goose session returns "" there, sending the reply down the global path
+    // so the card never clears (inviting a duplicate response).
+    emitGooseEvent(gooseSessionDirectory(sessionId), goosePermissionRepliedEvent(sessionId, requestId, response))
     return
   }
   await waitForConnectionOrThrow()
@@ -774,8 +786,7 @@ export async function dismissPermission(
   // EPISTEMOS(PATCH_LEDGER#R6e): see respondToPermission.
   if (engineForSession(sessionId) === "goose") {
     await gooseEngineClient.confirmToolAction(sessionId, requestId, "deny_once")
-    const directory = getSessionDirectory(sessionId) || ""
-    emitGooseEvent(directory, goosePermissionRepliedEvent(sessionId, requestId, "reject"))
+    emitGooseEvent(gooseSessionDirectory(sessionId), goosePermissionRepliedEvent(sessionId, requestId, "reject"))
     return
   }
   await waitForConnectionOrThrow()

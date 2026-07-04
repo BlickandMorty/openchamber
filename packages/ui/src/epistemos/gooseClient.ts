@@ -26,6 +26,12 @@ import { runtimeFetch } from '@/lib/runtime-fetch';
 
 const GOOSE_PREFIX = '/goose';
 const SESSION_INDEX_STORAGE_KEY = 'epistemos-goose-session-index-v1';
+const SESSION_TOMBSTONE_KEY = 'epistemos-goose-session-tombstones-v1';
+// Hardening: cap the SSE reassembly buffer so a goosed that streams bytes
+// without a \n\n frame boundary can't grow an unbounded main-thread string.
+const SSE_BUFFER_MAX_BYTES = 8 * 1024 * 1024;
+// Cap the tombstone set so it can't grow forever across a long-lived profile.
+const TOMBSTONE_MAX = 2_000;
 
 // ---------------------------------------------------------------------------
 // Types (tolerant mirrors of the goosed shapes the adapter consumes)
@@ -98,6 +104,27 @@ const writeStoredIndex = (entries: GooseSessionIndexEntry[]): void => {
         window.localStorage.setItem(SESSION_INDEX_STORAGE_KEY, JSON.stringify(entries));
     } catch {
         // Quota/private-mode failures degrade to a session-scoped index.
+    }
+};
+
+const readTombstones = (): Set<string> => {
+    try {
+        const raw = window.localStorage.getItem(SESSION_TOMBSTONE_KEY);
+        if (!raw) return new Set();
+        const parsed: unknown = JSON.parse(raw);
+        return Array.isArray(parsed) ? new Set(parsed.filter((id): id is string => typeof id === 'string')) : new Set();
+    } catch {
+        return new Set();
+    }
+};
+
+const writeTombstones = (ids: Set<string>): void => {
+    try {
+        // Keep only the most recent TOMBSTONE_MAX (insertion order preserved).
+        const trimmed = [...ids].slice(-TOMBSTONE_MAX);
+        window.localStorage.setItem(SESSION_TOMBSTONE_KEY, JSON.stringify(trimmed));
+    } catch {
+        // best-effort
     }
 };
 
@@ -204,7 +231,12 @@ const parseSseBlock = (block: string): GooseMessageEvent | null => {
 
 export class GooseEngineClient {
     private index: GooseSessionIndexEntry[] = readStoredIndex();
+    private tombstones: Set<string> = readTombstones();
     private pushTimer: number | null = null;
+    // Active /reply streams keyed by session id — so abort() can cancel the
+    // local reader, not just POST /agent/stop (a hung stream that never sends
+    // Finish would otherwise leak its reader and pin the UI "streaming").
+    private activeStreams = new Map<string, () => void>();
 
     constructor() {
         // The webview runs on a NON-PERSISTENT data store, so localStorage is
@@ -233,24 +265,47 @@ export class GooseEngineClient {
                 const existing = byId.get(entry.id);
                 if (!existing || entry.updatedAt >= existing.updatedAt) byId.set(entry.id, entry);
             }
+            // Re-read tombstones AFTER the await so a delete that happened during
+            // the in-flight fetch is honored (closes the boot-race resurrection).
+            this.tombstones = readTombstones();
+            for (const deletedId of this.tombstones) byId.delete(deletedId);
             this.index = [...byId.values()];
             writeStoredIndex(this.index);
+            // Push the reconciled (tombstone-pruned) view back so the durable
+            // server copy stops carrying deleted sessions.
+            this.schedulePushToServer();
         } catch {
             // Offline/absent goose: the in-memory index still works this launch.
         }
     }
 
+    private pushNow(): void {
+        void runtimeFetch('/goose-index', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(this.index),
+        }).catch(() => undefined);
+    }
+
     private schedulePushToServer(): void {
-        if (typeof window === 'undefined') return;
+        if (typeof window === 'undefined') {
+            this.pushNow();
+            return;
+        }
         if (this.pushTimer !== null) window.clearTimeout(this.pushTimer);
         this.pushTimer = window.setTimeout(() => {
             this.pushTimer = null;
-            void runtimeFetch('/goose-index', {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(this.index),
-            }).catch(() => undefined);
+            this.pushNow();
         }, 400);
+    }
+
+    /** Immediate durable push (cancels any pending debounce) — for deletes. */
+    private flushPushToServer(): void {
+        if (typeof window !== 'undefined' && this.pushTimer !== null) {
+            window.clearTimeout(this.pushTimer);
+            this.pushTimer = null;
+        }
+        this.pushNow();
     }
 
     async createSession(workingDir: string): Promise<GooseSession> {
@@ -259,6 +314,9 @@ export class GooseEngineClient {
             body: JSON.stringify({ working_dir: workingDir }),
         });
         const now = Date.now();
+        // A fresh id can never be a tombstone (goosed mints monotonic ids), but
+        // clear it defensively so a reused id resurfaces cleanly.
+        if (this.tombstones.delete(session.id)) writeTombstones(this.tombstones);
         this.upsertIndexEntry({
             id: session.id,
             title: session.name || session.description || 'goose session',
@@ -268,9 +326,9 @@ export class GooseEngineClient {
         });
         // goosed's /agent/start creates a session WITHOUT a provider selected
         // (the Web UI picks one; `/reply` 'Provider not set' otherwise). Adopt
-        // the user's own goose config (active_provider + GOOSE_MODEL) so a turn
-        // works with zero extra setup. Best-effort: a session with no provider
-        // still exists; the reply surfaces the honest goosed error.
+        // the user's own goose config provider so a turn works with zero extra
+        // setup. Best-effort: a session with no provider still exists; the reply
+        // surfaces the honest goosed error.
         await this.applyConfiguredProvider(session.id).catch(() => undefined);
         return session;
     }
@@ -289,18 +347,20 @@ export class GooseEngineClient {
         }
     }
 
-    /** Select the user's configured provider/model on a fresh session. */
+    /**
+     * Select the user's configured provider on a fresh session. Sends ONLY the
+     * provider — goosed's update_provider falls back to the config's own
+     * GOOSE_MODEL, so we never risk pairing a provider with a stale model that
+     * belongs to a different provider (which would create a session that then
+     * errors confusingly on the first /reply). Verified: provider-only returns
+     * 200 and the reply streams.
+     */
     private async applyConfiguredProvider(sessionId: string): Promise<void> {
         const provider = await this.readGooseConfig('active_provider');
         if (!provider) return;
-        const model = (await this.readGooseConfig('GOOSE_MODEL')) ?? undefined;
         await gooseFetch('/agent/update_provider', {
             method: 'POST',
-            body: JSON.stringify({
-                provider,
-                session_id: sessionId,
-                ...(model ? { model } : {}),
-            }),
+            body: JSON.stringify({ provider, session_id: sessionId }),
         });
     }
 
@@ -338,6 +398,18 @@ export class GooseEngineClient {
     }
 
     async abort(sessionId: string): Promise<void> {
+        // Cancel the LOCAL reader first so a goosed that ignores /agent/stop (or
+        // never closes the SSE) can't keep the fetch reader alive emitting
+        // synthetic events for a session the user has left.
+        const cancelStream = this.activeStreams.get(sessionId);
+        if (cancelStream) {
+            this.activeStreams.delete(sessionId);
+            try {
+                cancelStream();
+            } catch {
+                // ignore
+            }
+        }
         await gooseFetch('/agent/stop', {
             method: 'POST',
             body: JSON.stringify({ session_id: sessionId }),
@@ -412,7 +484,13 @@ export class GooseEngineClient {
     removeIndexEntry(sessionId: string): void {
         this.index = this.index.filter((entry) => entry.id !== sessionId);
         writeStoredIndex(this.index);
-        this.schedulePushToServer();
+        // Record a tombstone so a stale server copy or an in-flight hydrate
+        // can't resurrect this session on the next boot/merge.
+        this.tombstones.add(sessionId);
+        writeTombstones(this.tombstones);
+        // Deletion must be durable immediately — flush now, not on the 400ms
+        // debounce (the app may quit before it fires).
+        this.flushPushToServer();
     }
 
     /**
@@ -422,6 +500,18 @@ export class GooseEngineClient {
      */
     prompt(sessionId: string, userText: string, handlers: GooseStreamHandlers): () => void {
         const abortController = new AbortController();
+        const cancel = () => abortController.abort();
+        // Cancel any stream already live for this session so a re-send can't run
+        // two overlapping readers (each with its own synthesizer) at once.
+        const previous = this.activeStreams.get(sessionId);
+        if (previous) {
+            try {
+                previous();
+            } catch {
+                // ignore
+            }
+        }
+        this.activeStreams.set(sessionId, cancel);
         const synthesizer = new GooseDeltaSynthesizer();
 
         const userMessage: GooseMessage = {
@@ -460,6 +550,18 @@ export class GooseEngineClient {
                     const { done, value } = await reader.read();
                     if (done) break;
                     buffered += decoder.decode(value, { stream: true });
+                    // Bound the reassembly buffer: a goosed that streams bytes
+                    // with no \n\n frame boundary must not grow an unbounded
+                    // main-thread string until the tab OOMs.
+                    if (buffered.length > SSE_BUFFER_MAX_BYTES) {
+                        handlers.onError?.('goose stream frame exceeded buffer limit');
+                        try {
+                            await reader.cancel();
+                        } catch {
+                            // ignore
+                        }
+                        return;
+                    }
                     let boundary = buffered.indexOf('\n\n');
                     while (boundary !== -1) {
                         const block = buffered.slice(0, boundary);
@@ -504,10 +606,15 @@ export class GooseEngineClient {
             } catch (error) {
                 if (abortController.signal.aborted) return;
                 handlers.onError?.(error instanceof Error ? error.message : 'goose stream failed');
+            } finally {
+                // Unregister only if a newer prompt() hasn't already replaced us.
+                if (this.activeStreams.get(sessionId) === cancel) {
+                    this.activeStreams.delete(sessionId);
+                }
             }
         })();
 
-        return () => abortController.abort();
+        return cancel;
     }
 
     private upsertIndexEntry(entry: GooseSessionIndexEntry): void {

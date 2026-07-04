@@ -34,18 +34,36 @@ export const engineForSession = (sessionId: string | undefined | null): EngineKi
  * One-shot engine intent for the NEXT session creation (set by the composer
  * engine chip, consumed by the createSession route). A session's engine is
  * fixed at creation — the chip only ever affects new drafts.
+ *
+ * Hardening: the intent is a module global, so an unrelated createSession
+ * (multi-run, worktree, review) firing between the chip tap and the user's
+ * send would otherwise consume a 'goose' intent for the wrong session. Bind it
+ * to a short validity window — the user sends within seconds of tapping the
+ * chip; a stale intent silently reverts to opencode.
  */
+const NEXT_ENGINE_TTL_MS = 30_000;
 let nextSessionEngine: EngineKind = 'opencode';
+let nextSessionEngineSetAt = 0;
+
+const nowMs = (): number => (typeof Date !== 'undefined' ? Date.now() : 0);
 
 export const setNextSessionEngine = (engine: EngineKind): void => {
     nextSessionEngine = engine;
+    nextSessionEngineSetAt = engine === 'goose' ? nowMs() : 0;
 };
 
-export const getNextSessionEngine = (): EngineKind => nextSessionEngine;
+export const getNextSessionEngine = (): EngineKind => {
+    if (nextSessionEngine === 'goose' && nowMs() - nextSessionEngineSetAt > NEXT_ENGINE_TTL_MS) {
+        // Expired — treat as the default without mutating (getter stays pure).
+        return 'opencode';
+    }
+    return nextSessionEngine;
+};
 
 const consumeNextSessionEngine = (): EngineKind => {
-    const engine = nextSessionEngine;
+    const engine = getNextSessionEngine();
     nextSessionEngine = 'opencode';
+    nextSessionEngineSetAt = 0;
     return engine;
 };
 
@@ -275,18 +293,27 @@ const gooseUnsupported = (args: unknown[], passthrough: () => unknown, feature: 
 };
 
 export const wrapWithEngineDispatch = <T extends object>(service: T): T => {
+    // Cache the wrapped function per method so `wrapped.foo === wrapped.foo`
+    // (stable identity for memo deps / add+removeEventListener pairs), and so
+    // both routed and unrouted methods bind consistently to the raw target —
+    // the proxy is a thin OUTER dispatch layer; a donor method's internal
+    // `this.x()` calls run raw on the client, not back through the proxy.
+    const methodCache = new Map<string, (...args: unknown[]) => unknown>();
     return new Proxy(service, {
         get(target, property, receiver) {
             const original = Reflect.get(target, property, receiver);
             if (typeof property !== 'string' || typeof original !== 'function') {
                 return original;
             }
+            const cached = methodCache.get(property);
+            if (cached) return cached;
+            const raw = original as (...inner: unknown[]) => unknown;
             const route = gooseRoutes[property];
-            if (!route) {
-                return original;
-            }
-            return (...args: unknown[]) =>
-                route(args, () => (original as (...inner: unknown[]) => unknown).apply(target, args), target);
+            const wrapped = route
+                ? (...args: unknown[]) => route(args, () => raw.apply(target, args), target)
+                : raw.bind(target);
+            methodCache.set(property, wrapped);
+            return wrapped;
         },
     });
 };
