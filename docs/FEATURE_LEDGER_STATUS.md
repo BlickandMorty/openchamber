@@ -1,4 +1,4 @@
-# §8 Feature Ledger — living status (updated 2026-07-04, loop session 1)
+# §8 Feature Ledger — living status (updated 2026-07-04, post-soak)
 
 The shipping gate. States: **GREEN** (built + verified), **BUILT** (code landed,
 verification pending), **PARTIAL**, **OPEN**. No row is marked GREEN without
@@ -29,6 +29,10 @@ recorded evidence.
    immediately caught the bun-layout mega-chunk — initial payload fixed
    4010.7 -> 592.1 KB gz (budget 3500). Remaining producers: native signposts
    + HealthRow (doctrine §4).
-5. Packaging: node runtime + fork web bundle not yet staged into app Resources
-   (DEBUG runs resolve the dev checkout; release resolution returns unavailable
-   honestly).
+5. Packaging DONE: pinned node 25.8.2 + matched-triple opencode 1.17.12 +
+   47MB web tarball staged (build-openchamber-web.sh); artifact boots
+   standalone; supervisor unpacks version-stamped. Remaining: project.yml
+   preBuildScripts wiring (quiet-window; manual script run until then).
+6. Phase-5 soak PASS (4 min, request load): node 128->102MB, opencode ~395MB,
+   goosed 23MB — stable, no deaths. Crash-orphan sweep landed natively.
+7. Adapter unit tests 8/8 (delta synthesizer + SDK mapping).
