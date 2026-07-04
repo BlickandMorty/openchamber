@@ -58,3 +58,21 @@ So the goose-only row's ENTIRE code path is complete — transport (proxy),
 data access (adapter methods + tests), and presentation (this component). The
 only remaining decision is placement, which is deliberately the owner's.
 
+### Placement investigation (why it's genuinely a design call)
+
+Two candidate homes were assessed:
+
+- **Donor Settings section** — would require multi-point edits to the core
+  `packages/ui/src/components/views/SettingsView.tsx` (the `SettingsPageSlug`
+  type, the `pageOrder` array, the nav sidebar, the render switch, and the
+  settings-search index). Invasive to a complex 800-line donor file, and it
+  buries goose's live capabilities in global settings.
+- **Contextual per-session panel** — mount in the workspace panel area,
+  badge-gated to `engineForSession(id) === 'goose'`, alongside the
+  diff/git/terminal toggles. More discoverable, but a design choice about the
+  donor's chrome.
+
+Both are legitimate; the choice is a real UX decision (management surface vs.
+contextual surface) that belongs to the owner. The component is ready for
+either — it takes an `active` prop and renders self-contained.
+
