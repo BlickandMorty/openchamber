@@ -25,10 +25,11 @@ recorded evidence.
 2. Goose live confirmation flow (needs a goose provider configured + a
    tool-invoking prompt).
 3. R7 P2 gradient check on ≥3 themes incl. one custom.
-4. Perf budgets: bundle gate WIRED (scripts/check-embed-bundle-size.mjs) and
-   immediately caught the bun-layout mega-chunk — initial payload fixed
-   4010.7 -> 592.1 KB gz (budget 3500). Remaining producers: native signposts
-   + HealthRow (doctrine §4).
+4. Perf budgets: bundle gate WIRED; the per-package split that hit 592KB
+   BROKE SPA boot (cross-chunk TDZ) and was REVERTED — payload honestly
+   4010.7KB gz vs the 3500 contract (open regression: needs cycle-aware
+   splitting; budget conversation for the owner). Native signposts +
+   HealthRow producers LANDED.
 5. Packaging DONE: pinned node 25.8.2 + matched-triple opencode 1.17.12 +
    47MB web tarball staged (build-openchamber-web.sh); artifact boots
    standalone; supervisor unpacks version-stamped. Remaining: project.yml

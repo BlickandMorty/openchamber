@@ -120,15 +120,15 @@ export default defineConfig({
         manualChunks(id) {
           if (!id.includes('node_modules')) return undefined;
 
-          // EPISTEMOS(PATCH_LEDGER#P4a): bun hoists packages under
-          // node_modules/.bun/<pkg>@<ver>/node_modules/<pkg>/ — the first-
-          // segment parse below classified EVERY dependency as package
-          // ".bun", collapsing the whole vendor tree into one eager ~3.8MB
-          // gz chunk (caught by scripts/check-embed-bundle-size.mjs). Take
-          // the segment after the LAST node_modules/ instead; identical
-          // result on non-bun layouts.
-          const segments2 = id.split('node_modules/');
-          const match = segments2[segments2.length - 1];
+          // EPISTEMOS(PATCH_LEDGER#P4a REVERTED): a last-segment parse here
+          // restored per-package vendor chunks under bun's .bun layout — and
+          // broke SPA boot with a cross-chunk TDZ cycle ("Cannot access 'P'
+          // before initialization", caught live by the surface's render
+          // probe). The donor's first-segment parse ships one big vendor
+          // chunk under bun; correct-but-heavy beats fast-but-broken. The
+          // real split needs cycle-aware grouping (follow-up, with the
+          // bundle gate measuring the full static graph).
+          const match = id.split('node_modules/')[1];
           if (!match) return undefined;
 
           const segments = match.split('/');
