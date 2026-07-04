@@ -4327,6 +4327,10 @@ const ChatInputComponent: React.FC<ChatInputProps> = ({ onOpenSettings, scrollTo
                     </div>
                 ) : null}
                 <div
+                    /* EPISTEMOS(PATCH_LEDGER#P2a): stable hook for the June bar
+                       skin (epistemos/juneBar.css). Attribute only — behavior
+                       and classes are untouched. */
+                    data-epistemos-composer="true"
                     className={cn(
                         "flex flex-col relative overflow-visible",
                         isDesktopExpanded && 'flex-1 min-h-0',

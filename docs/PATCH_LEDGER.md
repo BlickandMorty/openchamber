@@ -18,6 +18,9 @@ stock-upstream.
 | R2c | `packages/ui/src/stores/useUpdateStore.ts` | early-return in `checkForUpdates` when `VITE_EPISTEMOS_EMBED === '1'` | No in-app self-update; update path is upstream merge + app release |
 | R2d | `packages/web/server/lib/opencode/openchamber-routes.js` | `/api/openchamber/update-check` answers `{available:false}` and `/api/openchamber/update-install` answers 400 when `EPISTEMOS_EMBED === '1'` | Server-side choke point: covers ALL client callers (useUpdateStore, UpdateDialog.tsx:163, Header.tsx:942 — the latter two were added upstream after the research base) and blocks the package-manager spawn |
 
+| P2a | `packages/ui/src/components/chat/ChatInput.tsx` | `data-epistemos-composer="true"` attribute on the composer box div (~:4329) — style hook only, zero behavior change | June bar needs a stable selector; the box has no semantic class and sets radius/bg as inline styles |
+| P2b | `packages/ui/src/index.css` | `@import "./epistemos/juneBar.css";` after the katex import | Loads the June bar overlay (geometry+color only, measured values in docs/JUNE_SIGNATURE_MEASUREMENTS.md) |
+
 ## Reserved upcoming rows (Plan 1 §6/R6)
 
 | ID | File | Planned hunk |

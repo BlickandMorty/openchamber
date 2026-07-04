@@ -1,0 +1,41 @@
+/* EPISTEMOS overlay (PATCH_LEDGER#P2a/P2b): the June message-bar signature —
+   geometry + color ONLY (owner-locked scope, Plan 1-PRO §5). Fonts, layout,
+   chips, queue, attachments, and all composer behavior stay donor-stock.
+   Every value is measured from June source: docs/JUNE_SIGNATURE_MEASUREMENTS.md.
+
+   Shadows use June's light-mode measurements for both appearances for now
+   (June's dark variant swaps to black-based washes; revisit at the Phase-2
+   owner-visual checkpoint if dark reads flat). */
+
+[data-epistemos-composer="true"] {
+  /* June: "squircle, not a pill" — r-xl = 14px; card fill; hairline stroke.
+     !important because the donor sets radius + background as inline styles. */
+  border-radius: 14px !important;
+  background-color: var(--surface-elevated) !important;
+  border-color: color-mix(in oklch, var(--border) 55%, transparent) !important;
+  box-shadow: 0 1px 2px oklch(24% 0.002 84.59 / 6%);
+  transition:
+    border-color 100ms cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 100ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+[data-epistemos-composer="true"]:focus-within {
+  /* June firms the border instead of flashing a stark ring:
+     border-color: color-mix(ring-focus 40%, border-subtle), where
+     ring-focus is a FOREGROUND-based warm mix (not primary). The donor's
+     ring-1 is retinted to the same value so focus reads June-soft while the
+     drag feedback ring (ring-2 ring-primary) stays fully donor-stock. */
+  --tw-ring-color: color-mix(
+    in oklch,
+    color-mix(in oklch, var(--foreground) 30%, transparent) 40%,
+    color-mix(in oklch, var(--border) 55%, transparent)
+  );
+  border-color: color-mix(
+    in oklch,
+    color-mix(in oklch, var(--foreground) 30%, transparent) 40%,
+    color-mix(in oklch, var(--border) 55%, transparent)
+  ) !important;
+  box-shadow:
+    0 4px 12px oklch(24% 0.002 84.59 / 6%),
+    0 1px 2px oklch(24% 0.002 84.59 / 4%);
+}
