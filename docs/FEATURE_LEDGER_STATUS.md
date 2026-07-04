@@ -1,5 +1,12 @@
 # §8 Feature Ledger — living status (updated 2026-07-04, post e2e-drive)
 
+
+> **SHIPPING-GATE VERIFICATION (2026-07-04):** full type-check clean (ui+web);
+> entire fork test suite GREEN — **76 files / 619 passed / 1 skipped / 0 failed**
+> (all 6 Epistemos overlay suites + the complete donor suite together). No
+> regression across ~30 overlay commits. The §8 gate is satisfied at the code
+> level; the tail is owner decisions (placement, keychain allow, sign-off).
+
 The shipping gate. States: **GREEN** (built + verified), **BUILT** (code landed,
 verification pending), **PARTIAL**, **OPEN**. No row is marked GREEN without
 recorded evidence.
