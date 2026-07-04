@@ -14,7 +14,7 @@ recorded evidence.
 | Providers/models picker | **GREEN (opencode) / PARTIAL (goose)** | opencode: donor config + Keychain→env bridge (bridgedProviderEnvironment, native). goose: /goose/config/providers proxied 200; picker UI for goose sessions not wired (chip default only) |
 | MCP extensions / recipes / scheduler | **OPEN (Phase 4)** | goose-only surfaces not yet exposed; /goose proxy passes the route groups through (recipes/schedule verified in goosed source) |
 | Multi-run / worktrees | **GREEN (opencode)** | Donor-stock; goose sessions excluded by design (no fake parity) |
-| Native pill / typewriter / all-chats / mascot hook | **BUILT** | Pill+hook+sheet Swift landed (build queued at write time); typewriter VISIBLE in-app (P0 screenshot). All-chats data path verified at HTTP level (/api/experimental/session + /goose-index) |
+| Native pill / typewriter / all-chats / mascot hook | **GREEN (visually proven)** | Pill full-render + typewriter + June bar screenshot-visible in-app; ALL-CHATS SHEET RENDERED LIVE 2026-07-04 (auto-presented via EPISTEMOS_OPEN_ALLCHATS DEBUG hook — SwiftUI pill is AX-opaque to scripting): native sheet fetched the REAL merged opencode session list and grouped by directory ("all research"/"jojo" with actual titles). goose badge absent only because no goose session exists yet (correct — needs owner key). Mascot hook = named seam |
 | June bar + derived gradient | **GREEN (bar) / BUILT (gradient)** | Bar visible in-app (P0 screenshot). Gradient vars emitted per-theme (R6c); ≥3-theme visual check pending (R7 P2 acceptance) |
 | Self-updater + PWA SW | **GREEN** | Embed dist: zero SW artifacts, stub unregisters; update-check/install + opencode upgrade stubbed (R2a–R2e); "embedded" answer verified through the app stack |
 
