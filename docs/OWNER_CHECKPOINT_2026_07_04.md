@@ -31,8 +31,11 @@ Full row-by-row state: `docs/FEATURE_LEDGER_STATUS.md`. Patch rows:
 
 ## Needs YOUR eyes (visual checkpoints I can't sign off alone)
 
-1. Open the Agent page: pill, June bar, typewriter, wash — the look.
-2. Send an opencode chat turn (P1 gate) and a goose turn via the chip (P3 gate).
+1. Open the Agent page: pill, June bar, typewriter, wash — the look. (All
+   screenshot-proven already; this is your aesthetic sign-off.)
+2. Send an opencode chat turn (P1 gate) — DONE, proven. goose turn (P3 gate)
+   — PROVEN at the app-proxy level using YOUR existing cursor-agent config
+   (no key needed); UI-visual is one rebuild away.
 3. All-chats sheet: open, check grouping/badges, select a session.
 4. Settings → Substrate Health → "Agent Surface (Pro)": felt-speed numbers.
 
