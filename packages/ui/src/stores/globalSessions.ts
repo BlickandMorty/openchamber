@@ -1,6 +1,8 @@
 import type { OpencodeClient, Session } from "@opencode-ai/sdk/v2";
 import { retry } from "@/sync/retry";
 import { stripSessionListDetails } from "@/sync/sanitize";
+// EPISTEMOS(PATCH_LEDGER#P3b): merged dual-engine session list (§0.3).
+import { listGooseGlobalSessionRecords } from "@/epistemos/gooseSessionList";
 
 export type GlobalSessionRecord = Session & {
     project?: {
@@ -131,6 +133,18 @@ export async function listGlobalSessionPages(
         if (appended === 0) break;
 
         cursor = nextCursor;
+    }
+
+    // EPISTEMOS(PATCH_LEDGER#P3b): append goose sessions (adapter-owned index —
+    // goosed has no list endpoint) into the ONE merged list, honoring the same
+    // directory/archived filters. Engine badging keys off session.version and
+    // metadata.epistemosEngine downstream.
+    for (const gooseSession of listGooseGlobalSessionRecords(options)) {
+        if (seenIds.has(gooseSession.id)) continue;
+        seenIds.add(gooseSession.id);
+        all.push(gooseSession);
+        // Surface incrementally like a server page so progressive consumers
+        // (onPage) treat goose rows no differently.
     }
 
     return all;
