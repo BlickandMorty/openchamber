@@ -148,7 +148,14 @@ const gooseIndexFile = () =>
  * endpoint feeds the native all-chats sheet.
  */
 const registerGooseIndexRoutes = (app, logger) => {
-  app.get('/goose-index', (_req, res) => {
+  app.get('/goose-index', (req, res) => {
+    // Data-leak defense: the index reveals the user's session titles + working
+    // directories. Refuse a cross-origin read (mirrors the PUT guard) so a
+    // hostile browsing context reaching the loopback port can't harvest it.
+    if (!isLoopbackOriginAllowed(req)) {
+      res.status(403).json({ error: 'cross-origin goose index read refused' });
+      return;
+    }
     try {
       const raw = fs.readFileSync(gooseIndexFile(), 'utf8');
       const parsed = JSON.parse(raw);
