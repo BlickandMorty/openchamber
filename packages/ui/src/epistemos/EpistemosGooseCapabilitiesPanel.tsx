@@ -14,7 +14,38 @@ import { useSessionUIStore } from '@/sync/session-ui-store';
 // a goose session is active — pass `active` accordingly. All colors come from
 // theme tokens; all icons from the shared Icon sprite (theme-system skill).
 
-type CapabilityRow = { id: string; title: string; subtitle?: string };
+type RowAction = { label: string; run: () => Promise<unknown> };
+type CapabilityRow = { id: string; title: string; subtitle?: string; action?: RowAction };
+
+// Small self-contained action button: runs the action, shows running/done/error
+// inline, never throws to the panel. Theme-token styled.
+const RowActionButton: React.FC<{ action: RowAction }> = ({ action }) => {
+    const [status, setStatus] = useState<'idle' | 'running' | 'done' | 'error'>('idle');
+    const run = async () => {
+        if (status === 'running') return;
+        setStatus('running');
+        try {
+            await action.run();
+            setStatus('done');
+        } catch {
+            setStatus('error');
+        }
+    };
+    const label =
+        status === 'running' ? '…' : status === 'done' ? 'Done' : status === 'error' ? 'Failed' : action.label;
+    return (
+        <button
+            type="button"
+            onClick={() => void run()}
+            disabled={status === 'running'}
+            className="inline-flex h-6 items-center gap-1 rounded px-2 text-xs hover:bg-[var(--interactive-hover)] disabled:opacity-60"
+            style={{ color: status === 'error' ? 'var(--status-error)' : 'var(--muted-foreground)' }}
+        >
+            {status === 'running' ? <Icon name="loader-4" className="h-3 w-3 animate-spin" /> : null}
+            {label}
+        </button>
+    );
+};
 
 const asRows = (
     payload: unknown,
@@ -78,8 +109,16 @@ const SECTIONS: Section[] = [
         icon: 'calendar-schedule',
         load: async () =>
             asRows(await gooseEngineClient.listSchedules(), (item, index) => {
-                const title = str(item.id) ?? str(item.name) ?? `Job ${index + 1}`;
-                return { id: `job-${title}`, title, subtitle: str(item.cron) ?? str(item.source) };
+                const scheduleId = str(item.id) ?? str(item.name);
+                const title = scheduleId ?? `Job ${index + 1}`;
+                return {
+                    id: `job-${title}`,
+                    title,
+                    subtitle: str(item.cron) ?? str(item.source),
+                    action: scheduleId
+                        ? { label: 'Run now', run: () => gooseEngineClient.runScheduleNow(scheduleId) }
+                        : undefined,
+                };
             }),
     },
     {
@@ -186,18 +225,21 @@ export const EpistemosGooseCapabilitiesPanel: React.FC<{ active: boolean }> = ({
                                 {state.rows.map((row) => (
                                     <li
                                         key={row.id}
-                                        className="rounded-md border px-2.5 py-1.5"
+                                        className="flex items-center justify-between gap-2 rounded-md border px-2.5 py-1.5"
                                         style={{
                                             borderColor: 'var(--border)',
                                             backgroundColor: 'var(--surface-elevated)',
                                         }}
                                     >
-                                        <div className="text-body-sm font-medium">{row.title}</div>
-                                        {row.subtitle ? (
-                                            <div className="text-body-sm" style={{ color: 'var(--muted-foreground)' }}>
-                                                {row.subtitle}
-                                            </div>
-                                        ) : null}
+                                        <div className="min-w-0">
+                                            <div className="text-body-sm font-medium truncate">{row.title}</div>
+                                            {row.subtitle ? (
+                                                <div className="text-body-sm truncate" style={{ color: 'var(--muted-foreground)' }}>
+                                                    {row.subtitle}
+                                                </div>
+                                            ) : null}
+                                        </div>
+                                        {row.action ? <RowActionButton action={row.action} /> : null}
                                     </li>
                                 ))}
                             </ul>
