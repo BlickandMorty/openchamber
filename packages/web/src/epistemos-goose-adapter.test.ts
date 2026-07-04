@@ -11,29 +11,32 @@ import {
 } from '@/epistemos/gooseSdkMapping';
 
 describe('GooseDeltaSynthesizer', () => {
+    const FB = 'fb-live';
     it('emits appended text across successive whole-message payloads', () => {
         const synth = new GooseDeltaSynthesizer();
-        const first = synth.consume({ id: 'm1', role: 'assistant', content: [{ type: 'text', text: 'Hel' }] });
+        const first = synth.consume({ id: 'm1', role: 'assistant', content: [{ type: 'text', text: 'Hel' }] }, FB);
         expect(first).toEqual({ messageId: 'm1', appendedText: 'Hel', fullText: 'Hel' });
-        const second = synth.consume({ id: 'm1', role: 'assistant', content: [{ type: 'text', text: 'Hello wor' }] });
+        const second = synth.consume({ id: 'm1', role: 'assistant', content: [{ type: 'text', text: 'Hello wor' }] }, FB);
         expect(second).toEqual({ messageId: 'm1', appendedText: 'lo wor', fullText: 'Hello wor' });
-        const third = synth.consume({ id: 'm1', role: 'assistant', content: [{ type: 'text', text: 'Hello world' }] });
+        const third = synth.consume({ id: 'm1', role: 'assistant', content: [{ type: 'text', text: 'Hello world' }] }, FB);
         expect(third?.appendedText).toBe('ld');
     });
 
     it('treats rewritten content as a full update with no delta', () => {
         const synth = new GooseDeltaSynthesizer();
-        synth.consume({ id: 'm1', content: [{ type: 'text', text: 'draft answer' }] });
-        const rewrite = synth.consume({ id: 'm1', content: [{ type: 'text', text: 'final' }] });
+        synth.consume({ id: 'm1', content: [{ type: 'text', text: 'draft answer' }] }, FB);
+        const rewrite = synth.consume({ id: 'm1', content: [{ type: 'text', text: 'final' }] }, FB);
         expect(rewrite).toEqual({ messageId: 'm1', appendedText: '', fullText: 'final' });
     });
 
-    it('tracks messages independently and ignores id-less payloads', () => {
+    it('tracks messages independently; id-less payloads use the fallback id (NOT dropped)', () => {
         const synth = new GooseDeltaSynthesizer();
-        expect(synth.consume({ content: [{ type: 'text', text: 'no id' }] })).toBeNull();
-        synth.consume({ id: 'a', content: [{ type: 'text', text: 'A1' }] });
-        synth.consume({ id: 'b', content: [{ type: 'text', text: 'B1' }] });
-        const a2 = synth.consume({ id: 'a', content: [{ type: 'text', text: 'A1A2' }] });
+        // goosed sends id:null on the reply — must render via the fallback, not vanish.
+        expect(synth.consume({ content: [{ type: 'text', text: 'no id' }] }, FB))
+            .toEqual({ messageId: FB, appendedText: 'no id', fullText: 'no id' });
+        synth.consume({ id: 'a', content: [{ type: 'text', text: 'A1' }] }, FB);
+        synth.consume({ id: 'b', content: [{ type: 'text', text: 'B1' }] }, FB);
+        const a2 = synth.consume({ id: 'a', content: [{ type: 'text', text: 'A1A2' }] }, FB);
         expect(a2?.appendedText).toBe('A2');
     });
 
@@ -46,7 +49,7 @@ describe('GooseDeltaSynthesizer', () => {
                 { type: 'toolConfirmationRequest', id: 'c1' },
                 { type: 'text', text: 'part two' },
             ],
-        });
+        }, FB);
         expect(result?.fullText).toBe('part one part two');
     });
 });
