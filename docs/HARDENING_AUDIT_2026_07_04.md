@@ -58,6 +58,52 @@ verified (live where possible, unit-tested where pure).
 - **MED — off-main Keychain** — provider-key reads moved off `@MainActor`, so a
   locked/contended Keychain can't stall the main thread on cold open.
 
+## Functional + engine-reactive pass (2026-07-04, later — witnessed on both engines)
+
+This lane made goose *actually work* end-to-end and the composer bar
+engine-reactive. Every item is fixed + committed; the HIGH items are
+witnessed on-screen (goose "I'm Auto…", opencode "I'm powered by
+opencode/big-pickle").
+
+- **HIGH — goose blank reply (adapter, `8f091ffa`)** — goosed streams the reply
+  Message with `id:null`; `GooseDeltaSynthesizer.consume` did `if(!messageId)
+  return null`, dropping ALL text → every reply rendered blank. Fix: shared
+  `gooseLiveAssistantMessageId(sessionId)` used by both the assistant-message
+  event and the text-part events so a null id still attaches. Locked by tests.
+- **HIGH — cursor-agent PATH (native, `d88a9b11b`)** — goose's `cursor-agent`
+  provider lives in `~/.local/bin` (auth in its own `~/.cursor`, NOT goose's
+  keyring); a GUI-launched app's launchd PATH omits it, so supervised goosed
+  couldn't spawn it → Ping-only, no text. Fix: `userToolPathDirectories`
+  (`~/.local/bin`,`~/bin`) added to the child PATH. Non-secret; does not touch
+  the DYLD/LD_PRELOAD denylist. (This is the REAL root cause; the keychain was a
+  red herring.)
+- **HIGH — goose permission ASK (`d3ee5e12`)** — the ask arrives as
+  `MessageContent::ActionRequired` (`{type:"actionRequired",data:{actionType:
+  "toolConfirmation",…}}`), NOT the dormant top-level `toolConfirmationRequest`
+  the adapter matched → permission cards never surfaced. Fix: source-accurate
+  `extractGooseToolConfirmation`.
+- **HIGH — goose permission REPLY (`06ca1f54`)** — `ConfirmToolActionRequest` is
+  `rename_all="camelCase"` with required `session_id`→`sessionId`; the adapter
+  sent snake_case → 422, reply dropped, tool hung. Fixed the body key. (Full
+  per-struct serde sweep: only this + the extension bodies were wrong; all
+  others verified.)
+- **engine-reactive bar** — `nextSessionEngine` was a plain module `let`; the
+  bar only updated on reload. Made the intent subscribable
+  (`subscribeNextSessionEngine` + `useSyncExternalStore`); one shared
+  `resolveActiveEngine` drives the model control, capabilities button, and
+  command-hiding, so the WHOLE bar flips the instant the chip toggles and back.
+  Chip unified onto the same reactive source (no drift). **Engine-intent TTL is
+  now 600s (was 30s)**; `consume` no longer resets the intent (that caused an
+  opencode flash on every goose send — the draft-close reset + TTL guard it).
+- **model control re-derives from the active engine** — goose shows its OWN
+  configured providers (live `/config/providers`, e.g. "Cursor Agent · auto"),
+  never the opencode "Big Pickle" alias; pick persists via `/config/upsert` +
+  session `update_provider`; pick-during-load race guarded.
+- **goose capability surface reachable** — mounted the previously-orphan panel
+  behind a goose-gated Capabilities button, expanded to extensions/recipes/
+  scheduler/tools/apps (all shapes verified vs live goosed), with a schedule
+  "Run now" action. Read-only sections distinguish fetch-failure from empty.
+
 ## Accepted residuals (documented, not fixed)
 
 | Finding | Why it stands |
@@ -68,6 +114,8 @@ verified (live where possible, unit-tested where pure).
 | Port allocation TOCTOU | Self-heals — a lost race fails the child and the bounded retry re-draws fresh ports. |
 | Unpacked web root is mutable | Same property as the shipped Work lane; exploiting it requires local malware already running as the user. |
 | Nav allowlist matches port only; chrome-intent has no `isTrusted` check | No escalation (still loopback + our port); model output can't inject scripts (DOMPurify). Defense-in-depth nits. |
+| Model pick persists to the SHARED goose config `active_provider` (affects the user's goose CLI too) | goose has exactly ONE `active_provider`, shared by app + CLI by design; the app writing the user's own deliberate choice is consistent with that config model, not a leak. Non-secret (`is_secret:false`). |
+| Capability panel is read-only except schedule "Run now" | Reachability was the bar (met); recipe-run / extension-toggle are session-scoped/stateful/destructive and will only ship once each is witnessed taking effect. |
 
 ## Verification
 - Proxy: live vs goosed — cross-origin 403, same/no-origin + full
