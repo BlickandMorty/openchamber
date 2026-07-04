@@ -7,6 +7,9 @@
 // transport activity.
 
 import type { Event } from '@opencode-ai/sdk/v2/client';
+// Side-effect: registers the native-chrome intent listener alongside the
+// event bridge (both are epistemos<->SPA seams loaded via SyncProvider).
+import '@/epistemos/chromeIntents';
 
 type GooseEventIngest = (directory: string, payload: Event) => void;
 
