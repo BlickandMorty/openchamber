@@ -30,17 +30,62 @@ export const engineForSession = (sessionId: string | undefined | null): EngineKi
 };
 
 /**
+ * One-shot engine intent for the NEXT session creation (set by the composer
+ * engine chip, consumed by the createSession route). A session's engine is
+ * fixed at creation — the chip only ever affects new drafts.
+ */
+let nextSessionEngine: EngineKind = 'opencode';
+
+export const setNextSessionEngine = (engine: EngineKind): void => {
+    nextSessionEngine = engine;
+};
+
+export const getNextSessionEngine = (): EngineKind => nextSessionEngine;
+
+const consumeNextSessionEngine = (): EngineKind => {
+    const engine = nextSessionEngine;
+    nextSessionEngine = 'opencode';
+    return engine;
+};
+
+/**
  * v1 dispatch surface: the session-scoped flows goose chat needs. Methods not
  * listed always pass through. Each handler receives the original args and the
  * wrapped service; returning `undefined` (not a promise) falls through to the
  * donor implementation.
  */
-type GooseRoute = (args: unknown[], passthrough: () => unknown) => unknown;
+type GooseRoute = (args: unknown[], passthrough: () => unknown, service: object) => unknown;
 
 const firstArgSessionId = (args: unknown[]): string | null =>
     typeof args[0] === 'string' ? (args[0] as string) : null;
 
 const gooseRoutes: Record<string, GooseRoute> = {
+    createSession: (args, passthrough, service) => {
+        if (consumeNextSessionEngine() !== 'goose') return passthrough();
+        const params = args[0];
+        const title =
+            params && typeof params === 'object' && typeof (params as { title?: unknown }).title === 'string'
+                ? ((params as { title: string }).title)
+                : '';
+        const explicitDirectory = typeof args[1] === 'string' && args[1].length > 0 ? (args[1] as string) : null;
+        const serviceDirectory =
+            typeof (service as { getDirectory?: () => string | undefined }).getDirectory === 'function'
+                ? (service as { getDirectory: () => string | undefined }).getDirectory()
+                : undefined;
+        const workingDir = explicitDirectory || serviceDirectory || '';
+        return gooseEngineClient.createSession(workingDir).then(async (session) => {
+            if (title) {
+                await gooseEngineClient.renameSession(session.id, title).catch(() => undefined);
+            }
+            const indexEntry = gooseEngineClient
+                .listIndexedSessions()
+                .find((entry) => entry.id === session.id);
+            if (!indexEntry) {
+                throw new Error('goose session index entry missing after create');
+            }
+            return gooseSessionToSdkSession({ ...session, name: title || session.name }, indexEntry);
+        });
+    },
     abortSession: (args, passthrough) => {
         const sessionId = firstArgSessionId(args);
         if (!sessionId || engineForSession(sessionId) !== 'goose') return passthrough();
@@ -189,7 +234,7 @@ export const wrapWithEngineDispatch = <T extends object>(service: T): T => {
                 return original;
             }
             return (...args: unknown[]) =>
-                route(args, () => (original as (...inner: unknown[]) => unknown).apply(target, args));
+                route(args, () => (original as (...inner: unknown[]) => unknown).apply(target, args), target);
         },
     });
 };
