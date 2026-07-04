@@ -355,6 +355,18 @@ function SessionNodeItemComponent(props: Props): React.ReactNode {
   const sessionPermissions = useSessionPermissions(session.id, sessionDirectory ?? undefined);
   const isActive = currentSessionId === session.id;
   const sessionTitle = resolvedSession.title || t('sessions.sidebar.session.untitled');
+  // EPISTEMOS(PATCH_LEDGER#P3c): engine badge — goose rows carry
+  // version === 'goose' from the adapter mapping (capability truth §0.6:
+  // directory grouping, no fake branch badges).
+  const epistemosEngineBadge = resolvedSession.version === 'goose' ? (
+    <span
+      className="ml-1 inline-flex flex-shrink-0 items-center rounded bg-[var(--status-warning)]/10 px-1 py-px text-[0.65rem] leading-none text-[var(--status-warning)]"
+      title="goose engine session"
+      aria-label="goose engine session"
+    >
+      goose
+    </span>
+  ) : null;
   const hasChildren = node.children.length > 0;
   const isPinnedSession = pinnedSessionIds.has(session.id);
   // Per-render-context expansion key: the same session can appear in both
@@ -1029,7 +1041,7 @@ function SessionNodeItemComponent(props: Props): React.ReactNode {
                     )}
                   >
                     <div className={cn('flex w-full items-center min-w-0 flex-1 overflow-hidden', isMinimalMode ? 'gap-1' : 'gap-1')}>
-                      <div className={cn('block min-w-0 flex-1 truncate typography-ui-label font-normal', isActive ? 'text-primary' : 'text-foreground')}>{renderHighlightedText(sessionTitle, normalizedSessionSearchQuery)}</div>
+                      <div className={cn('block min-w-0 flex-1 truncate typography-ui-label font-normal', isActive ? 'text-primary' : 'text-foreground')}>{renderHighlightedText(sessionTitle, normalizedSessionSearchQuery)}{epistemosEngineBadge}</div>
                       {alwaysShowActions ? <span className="ml-2 flex-shrink-0 text-[0.72rem] text-muted-foreground/75">{sessionCompactUpdatedLabel}</span> : null}
                       {!alwaysShowActions ? (
                         <div className="relative ml-1 flex h-4 min-w-4 flex-shrink-0 items-center justify-end">
@@ -1093,7 +1105,7 @@ function SessionNodeItemComponent(props: Props): React.ReactNode {
                 )}
               >
                 <div className={cn('flex w-full items-center min-w-0 flex-1 overflow-hidden', isMinimalMode ? 'gap-1' : 'gap-1')}>
-                    <div className={cn('block min-w-0 flex-1 truncate typography-ui-label font-normal', isActive ? 'text-primary' : 'text-foreground')}>{renderHighlightedText(sessionTitle, normalizedSessionSearchQuery)}</div>
+                    <div className={cn('block min-w-0 flex-1 truncate typography-ui-label font-normal', isActive ? 'text-primary' : 'text-foreground')}>{renderHighlightedText(sessionTitle, normalizedSessionSearchQuery)}{epistemosEngineBadge}</div>
                     {pendingPermissionCount > 0 ? (
                       <span className="inline-flex items-center gap-1 rounded bg-destructive/10 px-1 py-0.5 text-[0.7rem] text-destructive flex-shrink-0" title={t('sessions.sidebar.session.status.permissionRequired')} aria-label={t('sessions.sidebar.session.status.permissionRequired')}>
                         <Icon name="shield" className="h-3 w-3" />
