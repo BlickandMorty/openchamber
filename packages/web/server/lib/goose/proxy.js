@@ -77,6 +77,65 @@ export const isLoopbackOriginAllowed = (req) => {
   }
 };
 
+// Circuit breaker on the proxy->goosed leg (Plan §14.4 / hardening doctrine §2:
+// "ring buffer, not sticky counter"). A RING BUFFER of the last N outcomes — a
+// sticky counter can't tell 10 failures in 1s from 10 over 55s. When goosed is
+// down (crash + supervisor restart window) the breaker OPENS and fast-fails
+// (503) instead of piling connection attempts onto a dead child; after a
+// cooldown it HALF-OPENs and needs K CONSECUTIVE successes to close (a partial
+// recovery where one call succeeds then the next fails must not re-close it).
+// `nowMs` is injected so it stays testable without Date in module scope.
+export const createGooseCircuitBreaker = ({
+  window: windowSize = 20,
+  tripThreshold = 10,
+  cooldownMs = 5_000,
+  successesToClose = 2,
+  now = () => Date.now(),
+} = {}) => {
+  const outcomes = []; // ring buffer of booleans (true = failure)
+  let state = 'closed'; // 'closed' | 'open' | 'half-open'
+  let openedAt = 0;
+  let halfOpenSuccesses = 0;
+
+  const failuresInWindow = () => outcomes.reduce((n, failed) => n + (failed ? 1 : 0), 0);
+
+  return {
+    /** Call BEFORE dialing goosed. Returns true if the request may proceed. */
+    allowRequest() {
+      if (state === 'open') {
+        if (now() - openedAt >= cooldownMs) {
+          state = 'half-open';
+          halfOpenSuccesses = 0;
+          return true; // single probe allowed
+        }
+        return false;
+      }
+      return true;
+    },
+    recordSuccess() {
+      outcomes.push(false);
+      if (outcomes.length > windowSize) outcomes.shift();
+      if (state === 'half-open') {
+        halfOpenSuccesses += 1;
+        if (halfOpenSuccesses >= successesToClose) {
+          state = 'closed';
+          outcomes.length = 0; // fresh slate after recovery
+        }
+      }
+    },
+    recordFailure() {
+      outcomes.push(true);
+      if (outcomes.length > windowSize) outcomes.shift();
+      // A failed half-open probe re-opens immediately (no partial recovery).
+      if (state === 'half-open' || failuresInWindow() >= tripThreshold) {
+        state = 'open';
+        openedAt = now();
+      }
+    },
+    state: () => state,
+  };
+};
+
 const GOOSE_INDEX_MAX_BYTES = 1024 * 1024;
 
 const gooseIndexFile = () =>
@@ -149,11 +208,23 @@ export const registerGooseProxyRoutes = (app, { logger = console } = {}) => {
   // can't pin a proxy connection forever.
   const UPSTREAM_IDLE_TIMEOUT_MS = 120_000;
 
+  // Ring-buffer circuit breaker on the proxy->goosed leg (Plan §14.4).
+  const breaker = createGooseCircuitBreaker();
+
   app.use('/goose', (req, res) => {
     // Defense-in-depth: a cross-origin browsing context must not drive goose
     // with the injected secret (the surface is loopback-only regardless).
     if (!isLoopbackOriginAllowed(req)) {
       res.status(403).json({ error: 'cross-origin goose request refused' });
+      return;
+    }
+
+    // Fast-fail while goosed is known-down (breaker open) instead of piling
+    // connection attempts onto a dead/restarting child. /status is exempt so
+    // the UI can still poll readiness (it's how recovery is observed).
+    const isStatusProbe = req.originalUrl === '/goose/status' || req.originalUrl.startsWith('/goose/status?');
+    if (!isStatusProbe && !breaker.allowRequest()) {
+      res.status(503).json({ error: 'goose engine temporarily unavailable (circuit open)' });
       return;
     }
 
@@ -200,6 +271,10 @@ export const registerGooseProxyRoutes = (app, { logger = console } = {}) => {
       },
       (upstreamRes) => {
         settled = true;
+        // goosed answered (any HTTP status) — the connection leg is healthy;
+        // a 4xx/5xx is an app-level reply, not a transport failure, so it
+        // should not trip the breaker (only connect/timeout failures do).
+        breaker.recordSuccess();
         res.status(upstreamRes.statusCode || 502);
         for (const [name, value] of Object.entries(upstreamRes.headers)) {
           if (HOP_BY_HOP_HEADERS.has(name.toLowerCase())) continue;
@@ -228,6 +303,10 @@ export const registerGooseProxyRoutes = (app, { logger = console } = {}) => {
 
     upstream.on('error', (error) => {
       logger.error?.('[goose-proxy] upstream error:', error?.message ?? error);
+      // A pre-response transport failure (ECONNREFUSED while goosed restarts,
+      // idle timeout) feeds the breaker; a post-response error is a mid-stream
+      // drop, not a connect failure.
+      if (!settled) breaker.recordFailure();
       if (!res.headersSent) {
         res.status(settled ? 502 : 504).json({ error: 'goose upstream unavailable' });
       } else {
