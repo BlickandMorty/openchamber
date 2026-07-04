@@ -5,8 +5,24 @@
 // Self-registers on import (loaded via the epistemos bridge chain).
 
 import { useSessionUIStore } from '@/sync/session-ui-store';
+import { setNextSessionEngine, type EngineKind } from '@/epistemos/engineDispatch';
 
 const INTENT_EVENT_NAME = 'epistemos-chrome-intent';
+
+// DEBUG/acceptance affordance: the native host may load the SPA with
+// ?epistemosDefaultEngine=goose so a scripted keystroke-send creates a goose
+// session (the web engine chip is AX-opaque to scripted clicking). Harmless in
+// production — the param is simply never present.
+const applyDefaultEngineFromUrl = (): void => {
+    try {
+        const param = new URLSearchParams(window.location.search).get('epistemosDefaultEngine');
+        if (param === 'goose' || param === 'opencode') {
+            setNextSessionEngine(param as EngineKind);
+        }
+    } catch {
+        // No-op: a malformed URL just leaves the default engine (opencode).
+    }
+};
 
 type ChromeIntentDetail = {
     type?: string;
@@ -31,6 +47,7 @@ const handleIntent = (detail: ChromeIntentDetail): void => {
 };
 
 if (typeof window !== 'undefined') {
+    applyDefaultEngineFromUrl();
     window.addEventListener(INTENT_EVENT_NAME, (event) => {
         const detail = (event as CustomEvent<ChromeIntentDetail>).detail;
         if (detail && typeof detail === 'object') {
