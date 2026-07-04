@@ -22,12 +22,23 @@ export const useNextSessionEngine = (): EngineKind =>
  * Every engine-reactive control (model picker, capabilities, command-hiding)
  * shares this resolver so the WHOLE bar flips together and back with zero reload.
  */
+/** Pure resolution (testable): draft/no-session → the live intent; existing
+ *  session → that session's engine. Extracted so the rule is locked by a test. */
+export const resolveActiveEngine = (
+    intent: EngineKind,
+    currentSessionId: string | null,
+    draftOpen: boolean,
+    engineOf: (id: string) => EngineKind,
+): EngineKind => {
+    if (draftOpen || !currentSessionId) return intent;
+    return engineOf(currentSessionId);
+};
+
 export const useActiveComposerEngine = (): EngineKind => {
     const intent = useNextSessionEngine();
     const currentSessionId = useSessionUIStore((s) => s.currentSessionId);
     const draftOpen = useSessionUIStore((s) => Boolean(s.newSessionDraft?.open));
-    if (draftOpen || !currentSessionId) return intent;
-    return engineForSession(currentSessionId);
+    return resolveActiveEngine(intent, currentSessionId, draftOpen, engineForSession);
 };
 
 export const useActiveEngineIsGoose = (): boolean => useActiveComposerEngine() === 'goose';
