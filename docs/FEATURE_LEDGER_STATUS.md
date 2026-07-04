@@ -25,8 +25,10 @@ recorded evidence.
 2. Goose live confirmation flow (needs a goose provider configured + a
    tool-invoking prompt).
 3. R7 P2 gradient check on ≥3 themes incl. one custom.
-4. Perf budgets: `[agent_surface]` producers not wired (doctrine §4 — phase gate
-   still open): signposts + HealthRow + bundle-size assert.
+4. Perf budgets: bundle gate WIRED (scripts/check-embed-bundle-size.mjs) and
+   immediately caught the bun-layout mega-chunk — initial payload fixed
+   4010.7 -> 592.1 KB gz (budget 3500). Remaining producers: native signposts
+   + HealthRow (doctrine §4).
 5. Packaging: node runtime + fork web bundle not yet staged into app Resources
    (DEBUG runs resolve the dev checkout; release resolution returns unavailable
    honestly).

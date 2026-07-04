@@ -120,7 +120,15 @@ export default defineConfig({
         manualChunks(id) {
           if (!id.includes('node_modules')) return undefined;
 
-          const match = id.split('node_modules/')[1];
+          // EPISTEMOS(PATCH_LEDGER#P4a): bun hoists packages under
+          // node_modules/.bun/<pkg>@<ver>/node_modules/<pkg>/ — the first-
+          // segment parse below classified EVERY dependency as package
+          // ".bun", collapsing the whole vendor tree into one eager ~3.8MB
+          // gz chunk (caught by scripts/check-embed-bundle-size.mjs). Take
+          // the segment after the LAST node_modules/ instead; identical
+          // result on non-bun layouts.
+          const segments2 = id.split('node_modules/');
+          const match = segments2[segments2.length - 1];
           if (!match) return undefined;
 
           const segments = match.split('/');
