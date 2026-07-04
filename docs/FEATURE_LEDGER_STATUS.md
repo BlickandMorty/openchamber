@@ -1,0 +1,32 @@
+# §8 Feature Ledger — living status (updated 2026-07-04, loop session 1)
+
+The shipping gate. States: **GREEN** (built + verified), **BUILT** (code landed,
+verification pending), **PARTIAL**, **OPEN**. No row is marked GREEN without
+recorded evidence.
+
+| Feature | State | Evidence / gap |
+|---|---|---|
+| Project→worktree→session sidebar + pagination | **GREEN (opencode) / BUILT (goose)** | Donor stores untouched; sidebar rendered live in-app (P0 screenshot). goose rows merge via P3b (adapter index, directory-grouped) — e2e visual check pending |
+| Chat + streaming + tool UIs + diffs | **GREEN (opencode read paths) / BUILT (send+stream both engines)** | Sidebar + session data flowed in-app; Chrome probe showed full workspace. goose streaming (synthetic deltas) landed 4df585d0; UI-driven send awaits an idle window |
+| Permissions/questions | **BUILT (both)** | opencode: donor-stock. goose: shim landed 7d4aa188 (toolConfirmationRequest→permission.asked; reply→/goose/action-required/tool-confirmation, payload verified in goose source). Live confirmation flow untested |
+| Files / git panel / terminal PTY | **GREEN (server level)** | Engine-independent web-server routes; PTY WS `{"t":"ok","v":2}` + global-events WS `ready` + SSE verified same-origin (P0 smoke) — in-app panel click-through pending |
+| Message queue (reorder) | **GREEN** | Donor messageQueueStore untouched; no engine coupling |
+| Providers/models picker | **GREEN (opencode) / PARTIAL (goose)** | opencode: donor config + Keychain→env bridge (bridgedProviderEnvironment, native). goose: /goose/config/providers proxied 200; picker UI for goose sessions not wired (chip default only) |
+| MCP extensions / recipes / scheduler | **OPEN (Phase 4)** | goose-only surfaces not yet exposed; /goose proxy passes the route groups through (recipes/schedule verified in goosed source) |
+| Multi-run / worktrees | **GREEN (opencode)** | Donor-stock; goose sessions excluded by design (no fake parity) |
+| Native pill / typewriter / all-chats / mascot hook | **BUILT** | Pill+hook+sheet Swift landed (build queued at write time); typewriter VISIBLE in-app (P0 screenshot). All-chats data path verified at HTTP level (/api/experimental/session + /goose-index) |
+| June bar + derived gradient | **GREEN (bar) / BUILT (gradient)** | Bar visible in-app (P0 screenshot). Gradient vars emitted per-theme (R6c); ≥3-theme visual check pending (R7 P2 acceptance) |
+| Self-updater + PWA SW | **GREEN** | Embed dist: zero SW artifacts, stub unregisters; update-check/install + opencode upgrade stubbed (R2a–R2e); "embedded" answer verified through the app stack |
+
+## Cross-cutting verification debt (honest list)
+
+1. UI-driven e2e turn (opencode chat + goose chat via chip) — blocked on user-idle
+   window; all API-level plumbing beneath verified live.
+2. Goose live confirmation flow (needs a goose provider configured + a
+   tool-invoking prompt).
+3. R7 P2 gradient check on ≥3 themes incl. one custom.
+4. Perf budgets: `[agent_surface]` producers not wired (doctrine §4 — phase gate
+   still open): signposts + HealthRow + bundle-size assert.
+5. Packaging: node runtime + fork web bundle not yet staged into app Resources
+   (DEBUG runs resolve the dev checkout; release resolution returns unavailable
+   honestly).
