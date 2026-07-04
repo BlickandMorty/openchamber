@@ -120,21 +120,24 @@ export default defineConfig({
         manualChunks(id) {
           if (!id.includes('node_modules')) return undefined;
 
-          // EPISTEMOS(PATCH_LEDGER#P4a REVERTED): a last-segment parse here
-          // restored per-package vendor chunks under bun's .bun layout — and
-          // broke SPA boot with a cross-chunk TDZ cycle ("Cannot access 'P'
-          // before initialization", caught live by the surface's render
-          // probe). The donor's first-segment parse ships one big vendor
-          // chunk under bun; correct-but-heavy beats fast-but-broken. The
-          // real split needs cycle-aware grouping (follow-up, with the
-          // bundle gate measuring the full static graph).
-          const match = id.split('node_modules/')[1];
+          // EPISTEMOS(PATCH_LEDGER#P4a): parse the package name from the LAST
+          // node_modules segment. bun hoists to
+          // node_modules/.bun/<pkg>@<ver>/node_modules/<pkg>/, so the donor's
+          // first-segment parse classified EVERY dependency as ".bun" — one
+          // eager ~3.8MB gz chunk AND its own explicit react/zustand/markdown
+          // groupings silently never matched. The earlier boot TDZ was a
+          // separate app-code module cycle (chromeIntents), since fixed; the
+          // React grouping below is exactly what prevents a vendor init-order
+          // hazard. Verified boot-clean by the surface render probe + gated by
+          // scripts/check-embed-bundle-size.mjs.
+          const segments2 = id.split('node_modules/');
+          const match = segments2[segments2.length - 1];
           if (!match) return undefined;
 
           const segments = match.split('/');
           const packageName = match.startsWith('@') ? `${segments[0]}/${segments[1]}` : segments[0];
 
-          if (packageName === 'react' || packageName === 'react-dom') return 'vendor-react';
+          if (packageName === 'react' || packageName === 'react-dom' || packageName === 'scheduler' || packageName === 'react-is') return 'vendor-react';
           if (packageName === 'zustand' || packageName === 'zustand/middleware') return 'vendor-zustand';
 
           if (packageName === '@opencode-ai/sdk') return 'vendor-opencode-sdk';

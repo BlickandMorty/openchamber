@@ -27,11 +27,10 @@ recorded evidence.
 2. Goose live confirmation flow (needs a goose provider configured + a
    tool-invoking prompt).
 3. R7 P2 gradient check on ≥3 themes incl. one custom.
-4. Perf budgets: bundle gate WIRED; the per-package split that hit 592KB
-   BROKE SPA boot (cross-chunk TDZ) and was REVERTED — payload honestly
-   4010.7KB gz vs the 3500 contract (open regression: needs cycle-aware
-   splitting; budget conversation for the owner). Native signposts +
-   HealthRow producers LANDED.
+4. Perf budgets: bundle gate GREEN — initial payload 429.9 KB gz vs 3500
+   budget (the boot TDZ was an app-code cycle, since fixed; per-package
+   split now boots clean, verified in-app). Native signposts + HealthRow
+   producers LANDED.
 5. Packaging DONE: pinned node 25.8.2 + matched-triple opencode 1.17.12 +
    47MB web tarball staged (build-openchamber-web.sh); artifact boots
    standalone; supervisor unpacks version-stamped. Remaining: project.yml
