@@ -23,6 +23,8 @@ stock-upstream.
 | P2b | `packages/ui/src/index.css` | `@import "./epistemos/juneBar.css";` + `@import "./epistemos/landing/landing.css";` after the katex import | Loads the June bar + landing overlays (geometry+color only, measured values in docs/JUNE_SIGNATURE_MEASUREMENTS.md) |
 | P2d | `packages/ui/src/components/chat/ChatInput.tsx` + `ChatContainer.tsx` | the new-session draft `<h1>` renders `<EpistemosTypewriterGreeting className="epistemos-typewriter-hero">` with the same localized string; the now-unused local `renderDraftTitle` helpers removed | The REAL landing headline ("What are we working on…?") lives here, not in ChatEmptyState — RetroGaming typewriter is the owner headline signature |
 | P2c | `packages/ui/src/components/chat/ChatEmptyState.tsx` | root div gains `epistemos-landing-wash`; the start-new-chat span becomes `<EpistemosTypewriterGreeting text={t('chat.emptyState.startNewChat')} />` | Landing signatures: theme-derived June hero wash + RetroGaming typewriter headline (types the donor's own localized string — copy/i18n stay stock) |
+| R6c | `packages/ui/src/lib/theme/cssGenerator.ts` | `generateEpistemosLandingVariables` emits `--landing-hero-wash` (primary.base @ 11% oklch), `--landing-hero-wash-rim` (surface.elevated @ 70%), `--landing-hero-wash-gradient` for every theme | June gradient hook; formula provenance docs/JUNE_SIGNATURE_MEASUREMENTS.md |
+| R6d | `packages/web/server/index.js` | import + `registerGooseProxyRoutes(app)` after `setupBaseRoutes` | Mounts the `/goose/*` same-origin proxy (new overlay file `lib/goose/proxy.js`, node:http streaming, X-Secret-Key attached server-side from `EPISTEMOS_GOOSE_PORT`/`EPISTEMOS_GOOSE_SECRET`); inert without the env. Smoke-verified against real goosed: direct-without-secret 401, via-proxy 200 |
 
 ## Reserved upcoming rows (Plan 1 §6/R6)
 
@@ -30,6 +32,3 @@ stock-upstream.
 |---|---|---|
 | R6a | `packages/ui/src/lib/opencode/client.ts` | engine-dispatch injection point (goose adapter behind the SDK-shaped seam) |
 | R6b | `packages/ui/src/sync/event-pipeline.ts` | goose event translation entry (only if the adapter cannot stay fully outside) |
-| R6c | `packages/ui/src/lib/theme/cssGenerator.ts` | **LANDED**: `generateEpistemosLandingVariables` emits `--landing-hero-wash` (primary.base @ 11% oklch), `--landing-hero-wash-rim` (surface.elevated @ 70%), `--landing-hero-wash-gradient` for every theme. Formula provenance: docs/JUNE_SIGNATURE_MEASUREMENTS.md |
-
-| R6d | `packages/web/server/index.js` | import + `registerGooseProxyRoutes(app)` after `setupBaseRoutes` | Mounts the `/goose/*` same-origin proxy (new overlay file `lib/goose/proxy.js`, node:http streaming, X-Secret-Key attached server-side from `EPISTEMOS_GOOSE_PORT`/`EPISTEMOS_GOOSE_SECRET`); inert without the env. Smoke-verified against real goosed: direct-without-secret 401, via-proxy 200 |
